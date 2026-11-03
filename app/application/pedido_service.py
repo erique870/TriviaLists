@@ -1,4 +1,4 @@
-"""Casos de uso de criação e cancelamento de pedidos."""
+"""Casos de uso do cliente: CU01 visualizar, CU02 pedir e CU03 cancelar."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from app.application.ports import RepositorioListaDiaria, RepositorioPedido, Rep
 from app.domain import (
     AcessoNegadoError,
     ListaDiaria,
+    PapelUsuario,
     Pedido,
+    Usuario,
     ValidacaoDeDominioError,
 )
 
@@ -25,6 +27,23 @@ class ServicoPedido:
         self.listas = listas
         self.pedidos = pedidos
 
+    def listar_listas_abertas(
+        self,
+        aluno_id: int,
+        data_hora: datetime,
+        restaurante_id: int | None = None,
+    ) -> list[ListaDiaria]:
+        """CU01: lista cardápios abertos e ainda dentro do horário limite."""
+        self._obter_aluno(aluno_id)
+        if data_hora.utcoffset() is None:
+            raise ValidacaoDeDominioError("A consulta precisa informar um fuso horário.")
+        return self.listas.listar_abertas(data_hora, restaurante_id)
+
+    def listar_meus_pedidos(self, aluno_id: int) -> list[Pedido]:
+        """Retorna somente os pedidos do aluno autenticado (apoio ao CU03)."""
+        self._obter_aluno(aluno_id)
+        return self.pedidos.listar_por_usuario(aluno_id)
+
     def criar_pedido(
         self,
         aluno_id: int,
@@ -32,9 +51,7 @@ class ServicoPedido:
         itens: Mapping[int, int],
         data_hora: datetime,
     ) -> Pedido:
-        aluno = self.usuarios.obter_por_id(aluno_id)
-        if aluno is None:
-            raise AcessoNegadoError("Usuário não encontrado.")
+        aluno = self._obter_aluno(aluno_id)
         lista = self._obter_lista(lista_id)
         pedido = lista.criar_pedido(
             usuario=aluno,
@@ -53,9 +70,7 @@ class ServicoPedido:
             raise ValidacaoDeDominioError(
                 "Pedido não encontrado.", codigo="pedido_nao_encontrado"
             )
-        aluno = self.usuarios.obter_por_id(aluno_id)
-        if aluno is None:
-            raise AcessoNegadoError("Usuário não encontrado.")
+        aluno = self._obter_aluno(aluno_id)
         lista = self._obter_lista(pedido.lista_diaria_id)
         lista.cancelar_pedido(aluno, pedido_id, data_hora)
         pedido_atualizado = next(p for p in lista.pedidos if p.id == pedido_id)
@@ -69,3 +84,9 @@ class ServicoPedido:
                 "Lista diária não encontrada.", codigo="lista_nao_encontrada"
             )
         return lista
+
+    def _obter_aluno(self, aluno_id: int) -> Usuario:
+        aluno = self.usuarios.obter_por_id(aluno_id)
+        if aluno is None or aluno.papel != PapelUsuario.ALUNO:
+            raise AcessoNegadoError("Operação permitida somente para alunos autenticados.")
+        return aluno

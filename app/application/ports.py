@@ -6,6 +6,7 @@ dados. O domínio e os serviços não dependem dessa escolha.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
 from app.domain import ListaDiaria, Pedido, Produto, Restaurante, Usuario
@@ -36,6 +37,10 @@ class RepositorioListaDiaria(Protocol):
 
     def obter_por_id(self, lista_id: int) -> ListaDiaria | None: ...
 
+    def listar_abertas(
+        self, data_hora: datetime, restaurante_id: int | None = None
+    ) -> list[ListaDiaria]: ...
+
     def salvar(self, lista: ListaDiaria) -> None: ...
 
 
@@ -43,5 +48,7 @@ class RepositorioPedido(Protocol):
     def proximo_id(self) -> int: ...
 
     def obter_por_id(self, pedido_id: int) -> Pedido | None: ...
+
+    def listar_por_usuario(self, usuario_id: int) -> list[Pedido]: ...
 
     def salvar(self, pedido: Pedido) -> None: ...

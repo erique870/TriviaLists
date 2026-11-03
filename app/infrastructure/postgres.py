@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 from psycopg.errors import UniqueViolation
@@ -25,7 +26,7 @@ from app.domain import (
 
 
 class RepositoriosPostgres:
-    """Implementa as portas de usuário, restaurante, produto e lista diária."""
+    """Implementa as portas de persistência do domínio."""
 
     def __init__(self, pool: ConnectionPool) -> None:
         self.pool = pool
@@ -125,6 +126,16 @@ class RepositoriosPostgres:
             status_retirada=StatusRetirada(row["status_retirada"]),
         )
 
+    def listar_pedidos_por_usuario(self, usuario_id: int) -> list[Pedido]:
+        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT id FROM pedidos WHERE usuario_id=%s ORDER BY data_hora_pedido DESC, id DESC",
+                (usuario_id,),
+            )
+            pedido_ids = [row["id"] for row in cur.fetchall()]
+        return [pedido for pedido_id in pedido_ids
+                if (pedido := self.obter_pedido(pedido_id)) is not None]
+
     def salvar_pedido(self, pedido: Pedido) -> None:
         try:
             with self.pool.connection() as conn:
@@ -208,6 +219,23 @@ class RepositoriosPostgres:
             )
         return lista
 
+    def listar_listas_abertas(
+        self, data_hora: datetime, restaurante_id: int | None = None
+    ) -> list[ListaDiaria]:
+        sql = """SELECT id FROM listas_diarias
+                 WHERE status='ABERTA' AND horario_abertura <= %s
+                   AND horario_fechamento > %s"""
+        params: tuple = (data_hora, data_hora)
+        if restaurante_id is not None:
+            sql += " AND restaurante_id=%s"
+            params += (restaurante_id,)
+        sql += " ORDER BY horario_fechamento, id"
+        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, params)
+            lista_ids = [row["id"] for row in cur.fetchall()]
+        return [lista for lista_id in lista_ids
+                if (lista := self.obter_lista(lista_id)) is not None]
+
     def salvar_lista(self, lista: ListaDiaria) -> None:
         """Salva lista e vínculos em uma transação."""
         with self.pool.connection() as conn:
@@ -272,6 +300,10 @@ class RepositorioListaDiariaPostgres:
     def proximo_id(self) -> int: return self.db.proximo_id_lista()
     def obter_por_id(self, lista_id: int) -> ListaDiaria | None:
         return self.db.obter_lista(lista_id)
+    def listar_abertas(
+        self, data_hora: datetime, restaurante_id: int | None = None
+    ) -> list[ListaDiaria]:
+        return self.db.listar_listas_abertas(data_hora, restaurante_id)
     def salvar(self, lista: ListaDiaria) -> None: self.db.salvar_lista(lista)
 
 
@@ -280,4 +312,6 @@ class RepositorioPedidoPostgres:
     def proximo_id(self) -> int: return self.db.proximo_id_pedido()
     def obter_por_id(self, pedido_id: int) -> Pedido | None:
         return self.db.obter_pedido(pedido_id)
+    def listar_por_usuario(self, usuario_id: int) -> list[Pedido]:
+        return self.db.listar_pedidos_por_usuario(usuario_id)
     def salvar(self, pedido: Pedido) -> None: self.db.salvar_pedido(pedido)

@@ -76,6 +76,11 @@ class ListaDiaria:
             raise ValidacaoDeDominioError(
                 "Não é possível pedir em uma lista fechada.", codigo="lista_fechada"
             )
+        if data_hora < self.horario_abertura:
+            raise ValidacaoDeDominioError(
+                "A lista ainda não abriu para receber pedidos.",
+                codigo="lista_ainda_nao_aberta",
+            )
         if not self.validar_horario_fechamento(data_hora):
             raise HorarioLimiteExcedidoError()
         if self.possui_pedido_ativo(usuario.id):
@@ -120,6 +125,11 @@ class ListaDiaria:
     def cancelar_pedido(self, usuario: Usuario, pedido_id: int, data_hora: datetime) -> None:
         if usuario.papel != PapelUsuario.ALUNO:
             raise AcessoNegadoError("Somente alunos podem cancelar pedidos.")
+        if self.status != StatusLista.ABERTA:
+            raise ValidacaoDeDominioError(
+                "Não é possível cancelar pedido em uma lista fechada.",
+                codigo="lista_fechada",
+            )
         if not self.validar_horario_fechamento(data_hora):
             raise HorarioLimiteExcedidoError()
         pedido = next((p for p in self.pedidos if p.id == pedido_id), None)
