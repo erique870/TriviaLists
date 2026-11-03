@@ -1,10 +1,6 @@
-"""Repositórios em memória para desenvolvimento e testes.
+"""Repositórios em memória para testes; seguem as portas em ``ports.py``."""
 
-Eles seguem as portas em ``ports.py``; adaptadores SQL futuros só precisam
-implementar os mesmos métodos.
-"""
-
-from app.domain import ListaDiaria, Produto, Restaurante, Usuario
+from app.domain import ListaDiaria, Pedido, Produto, Restaurante, Usuario
 
 
 class RepositorioUsuariosEmMemoria:
@@ -55,3 +51,17 @@ class RepositorioListasEmMemoria:
 
     def salvar(self, lista: ListaDiaria) -> None:
         self._listas[lista.id] = lista
+
+
+class RepositorioPedidosEmMemoria:
+    def __init__(self, pedidos: list[Pedido] | None = None) -> None:
+        self._pedidos = {pedido.id: pedido for pedido in pedidos or []}
+
+    def proximo_id(self) -> int:
+        return max(self._pedidos, default=0) + 1
+
+    def obter_por_id(self, pedido_id: int) -> Pedido | None:
+        return self._pedidos.get(pedido_id)
+
+    def salvar(self, pedido: Pedido) -> None:
+        self._pedidos[pedido.id] = pedido

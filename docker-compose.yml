@@ -1,10 +1,33 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: trivialists
+      POSTGRES_USER: trivialists
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trivialists-local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trivialists -d trivialists"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: .
       target: runtime
     ports:
       - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql://trivialists:${POSTGRES_PASSWORD:-trivialists-local}@db:5432/trivialists
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   tests:
@@ -12,3 +35,6 @@ services:
       context: .
       target: test
     profiles: ["test"]
+
+volumes:
+  postgres_data:

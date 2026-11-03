@@ -28,6 +28,8 @@ class ListaDiaria:
     pedidos: list[Pedido] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        if self.horario_abertura.utcoffset() is None or self.horario_fechamento.utcoffset() is None:
+            raise ValidacaoDeDominioError("Os horários da lista precisam informar fuso horário.")
         if self.horario_fechamento <= self.horario_abertura:
             raise ValidacaoDeDominioError("Fechamento deve ocorrer após a abertura.")
 
@@ -70,6 +72,10 @@ class ListaDiaria:
     ) -> Pedido:
         if usuario.papel != PapelUsuario.ALUNO:
             raise AcessoNegadoError("Somente alunos podem criar pedidos.")
+        if self.status != StatusLista.ABERTA:
+            raise ValidacaoDeDominioError(
+                "Não é possível pedir em uma lista fechada.", codigo="lista_fechada"
+            )
         if not self.validar_horario_fechamento(data_hora):
             raise HorarioLimiteExcedidoError()
         if self.possui_pedido_ativo(usuario.id):

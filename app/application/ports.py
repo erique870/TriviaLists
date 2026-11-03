@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.domain import ListaDiaria, Produto, Restaurante, Usuario
+from app.domain import ListaDiaria, Pedido, Produto, Restaurante, Usuario
 
 
 class RepositorioUsuario(Protocol):
@@ -37,3 +37,11 @@ class RepositorioListaDiaria(Protocol):
     def obter_por_id(self, lista_id: int) -> ListaDiaria | None: ...
 
     def salvar(self, lista: ListaDiaria) -> None: ...
+
+
+class RepositorioPedido(Protocol):
+    def proximo_id(self) -> int: ...
+
+    def obter_por_id(self, pedido_id: int) -> Pedido | None: ...
+
+    def salvar(self, pedido: Pedido) -> None: ...

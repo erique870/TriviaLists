@@ -19,6 +19,14 @@ class Usuario:
             raise ValidacaoDeDominioError(
                 "Nome, e-mail e hash da senha são obrigatórios."
             )
+        for campo, valor, limite in (
+            ("Nome do usuário", self.nome, 150),
+            ("E-mail", self.email, 255),
+            ("Hash da senha", self.senha_hash, 255),
+            ("Telefone", self.telefone, 30),
+        ):
+            if len(valor) > limite:
+                raise ValidacaoDeDominioError(f"{campo} deve ter até {limite} caracteres.")
         if self.papel == PapelUsuario.ALUNO and self.restaurante_id is not None:
             raise ValidacaoDeDominioError(
                 "Aluno não pode estar associado a um restaurante."

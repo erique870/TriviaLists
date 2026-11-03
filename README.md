@@ -449,11 +449,13 @@ As tecnologias foram escolhidas visando extrema leveza, execução nativa sem de
   - **HTML5 e CSS3 puro**: Construção da interface com semântica estrita, usando CSS Grid e Flexbox para layout responsivo, sem dependência de pré-processadores ou bibliotecas utilitárias.
   - **JavaScript Vanilla**: Manipulação direta do DOM e comunicação assíncrona nativa com o servidor através da `Fetch API`.
 - **Backend**:
-  - **Node.js**: Funcionará como um conjunto de APIs, onde cada rota da API é um script JavaScript simplificado designado para controle e gerenciamento das requisições respectivas. A validação de token e o acesso ao banco ficam em módulos compartilhados, evitando sua duplicação em cada rota.
+  - **Python 3.11+ e FastAPI**: API organizada em domínio, casos de uso e adaptadores de persistência. O acesso SQL usa Psycopg 3 e pool de conexões.
 - **Banco de Dados**:
-  - **MySQL**: Banco de dados relacional clássico e consolidado na indústria, com suporte nativo a chaves estrangeiras e restrições de integridade.
+  - **PostgreSQL**: O schema em `database/schema.sql` é compatível com PostgreSQL e Supabase, incluindo chaves estrangeiras, constraints e índice único parcial para pedidos ativos.
 - **Hospedagem e Deploy**:
-  - **Vercel**: O repositório centraliza o frontend estático e as funções serverless. O Vercel serve os arquivos estáticos e executa as funções da pasta `/api` com latência de inicialização mínima, provendo certificado HTTPS automático. O banco de dados é hospedado em serviço externo, acessado por meio de *pool* de conexões compatível com execução *serverless*.
+  - **Docker Compose**: Executa a API e o PostgreSQL. O schema e os dados iniciais são aplicados automaticamente na primeira criação do volume do banco.
+
+Para iniciar a API e o banco localmente, execute `docker compose up --build`. A API fica disponível em `http://localhost:8001`; `GET /health/database` verifica a conexão com o PostgreSQL. Para alterar a senha local do banco, defina `POSTGRES_PASSWORD` antes de iniciar os serviços. Ao usar Supabase ou outro PostgreSQL externo, aplique `database/schema.sql` e configure `DATABASE_URL` para a conexão desse banco.
 
 ## Persistência de Dados
 
@@ -467,12 +469,7 @@ O modelo relacional deriva diretamente do diagrama de classes da Figura [fig:cl
 - **Pedido**: identificador, referência ao usuário e à lista diária, timestamp da solicitação, valor total, status (**ATIVO** ou **CANCELADO**) e status de retirada (**PENDENTE** ou **RETIRADO**).
 - **ItemPedido**: identificador, referência ao pedido e ao produto, quantidade e preço unitário. O preço é copiado do Produto no momento da gravação e não referenciado, de modo que reajustes posteriores no cardápio não alterem o valor de pedidos já registrados.
 
-A RN03 é assegurada pelo próprio banco por meio de uma restrição de unicidade sobre `(usuario\_id, lista\_diaria\_id)`. Como pedidos cancelados não devem impedir que o cliente registre um novo pedido, a restrição precisa ignorá-los. O MySQL não oferece índices únicos parciais, mas admite múltiplos valores nulos em um índice único; emprega-se, portanto, uma coluna gerada que assume valor nulo quando o pedido está cancelado:
-
-```
-ativo TINYINT AS (IF(status = 'CANCELADO', NULL, 1)) STORED,
-UNIQUE KEY uk_pedido_ativo (usuario_id, lista_diaria_id, ativo)
-```
+A RN03 é assegurada no PostgreSQL pelo índice único parcial `uk_pedido_ativo` sobre `(usuario_id, lista_diaria_id)`, aplicado apenas quando `status = 'ATIVO'`. Assim, pedidos cancelados não impedem um novo pedido do mesmo aluno para a lista.
 A chave é composta por `lista\_diaria\_id`, e não por restaurante e data, porque é a lista diária que identifica de forma única a refeição de um restaurante em uma data — permitindo, se necessário, mais de uma lista por dia para o mesmo estabelecimento.
 
 ## Atendimento aos RNFs
@@ -482,9 +479,9 @@ A Tabela [tab:rnf-arquitetura](#tab%3Arnf-arquitetura) detalha como as decisõe
 l p3.2cm X **RNF** & **Critério Definido** & **Sustentação na Arquitetura**\
 **RNF01** (Desempenho) & Resposta em até 2.0s para 95%das requisições & Frontend estático sem sobrecarga de frameworks, entregue via CDN; consultas SQL simples e indexadas por data e por lista diária.\
 **RNF02** (Usabilidade) & Mobile-First com 100%de responsividade & Folhas de estilo em CSS3 nativo com *media queries* sob medida para smartphones; interface limpa inspirada na agilidade do WhatsApp.\
-**RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & Arquitetura *serverless* no Vercel com escalabilidade elástica automática para absorver os picos matinais; acesso ao banco concentrado em um único módulo, com *pool* de conexões dimensionado para o limite do servidor MySQL.\
+**RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & API conteinerizada e acesso ao PostgreSQL concentrado nos adaptadores de persistência, com *pool* de conexões configurável.\
 \
-**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Tráfego estritamente protegido sob protocolo HTTPS nativo do Vercel; senhas armazenadas como *hash* com sal (bcrypt ou Argon2), não recuperáveis nem pela equipe; acesso aos dados restrito pelo escopo definido na RN05.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
+**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas como *hash* com sal (bcrypt ou Argon2), não recuperáveis nem pela equipe; acesso aos dados restrito pelo escopo definido na RN05.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
 
 # Lições Aprendidas
 

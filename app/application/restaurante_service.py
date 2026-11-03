@@ -55,7 +55,6 @@ class ServicoRestaurante:
             produtos=produtos,
             publicada_em=publicada_em,
         )
-        self.restaurantes.salvar(restaurante)
         self.listas.salvar(lista)
         return lista
 

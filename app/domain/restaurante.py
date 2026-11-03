@@ -19,6 +19,12 @@ class Restaurante:
     listas: list[ListaDiaria] = field(default_factory=list)
     ativo: bool = True
 
+    def __post_init__(self) -> None:
+        if not self.nome.strip() or len(self.nome) > 100:
+            raise ValidacaoDeDominioError("Nome do restaurante deve ter entre 1 e 100 caracteres.")
+        if not self.endereco.strip() or len(self.endereco) > 255:
+            raise ValidacaoDeDominioError("Endereço deve ter entre 1 e 255 caracteres.")
+
     def obter_tipo_cardapio(self) -> TipoCardapio:
         return self.tipo_cardapio
 
@@ -29,6 +35,8 @@ class Restaurante:
         produtos: list[Produto],
         publicada_em: datetime,
     ) -> ListaDiaria:
+        if publicada_em.utcoffset() is None:
+            raise ValidacaoDeDominioError("A publicação precisa informar um fuso horário.")
         if not self.ativo:
             raise ValidacaoDeDominioError(
                 "Restaurante inativo não pode publicar cardápio.",

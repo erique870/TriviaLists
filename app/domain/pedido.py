@@ -5,6 +5,7 @@ from decimal import Decimal
 from app.domain.enums import StatusPedido, StatusRetirada
 from app.domain.exceptions import RegraDeNegocioError, ValidacaoDeDominioError
 from app.domain.item_pedido import ItemPedido
+from app.domain.money import numeric_10_2
 
 
 @dataclass(slots=True)
@@ -22,6 +23,7 @@ class Pedido:
         if not self.itens:
             raise ValidacaoDeDominioError("Pedido precisa conter ao menos um item.")
         self.valor_total = self.calcular_total()
+        self.valor_total = numeric_10_2(self.valor_total, "Total do pedido")
         for item in self.itens:
             item.pedido_id = self.id
 

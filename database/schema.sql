@@ -62,6 +62,30 @@ CREATE TABLE IF NOT EXISTS lista_produtos (
     PRIMARY KEY (lista_diaria_id, produto_id)
 );
 
+-- Impede que uma lista de um restaurante inclua produto de outro restaurante.
+CREATE OR REPLACE FUNCTION validar_restaurante_lista_produto()
+RETURNS TRIGGER AS $$
+DECLARE
+    restaurante_lista BIGINT;
+    restaurante_produto BIGINT;
+BEGIN
+    SELECT restaurante_id INTO restaurante_lista
+      FROM listas_diarias WHERE id = NEW.lista_diaria_id;
+    SELECT restaurante_id INTO restaurante_produto
+      FROM produtos WHERE id = NEW.produto_id;
+    IF restaurante_lista IS DISTINCT FROM restaurante_produto THEN
+        RAISE EXCEPTION 'O produto deve pertencer ao restaurante da lista.'
+          USING ERRCODE = '23514', CONSTRAINT = 'ck_lista_produto_mesmo_restaurante';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_lista_produto_mesmo_restaurante ON lista_produtos;
+CREATE TRIGGER trg_lista_produto_mesmo_restaurante
+BEFORE INSERT OR UPDATE OF lista_diaria_id, produto_id ON lista_produtos
+FOR EACH ROW EXECUTE FUNCTION validar_restaurante_lista_produto();
+
 -- 6. Tabela: pedidos
 CREATE TABLE IF NOT EXISTS pedidos (
     id BIGSERIAL PRIMARY KEY,
@@ -82,6 +106,29 @@ CREATE TABLE IF NOT EXISTS itens_pedido (
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
     preco_unitario NUMERIC(10, 2) NOT NULL CHECK (preco_unitario >= 0) -- RN04
 );
+
+-- Impede que um item de pedido use produto ausente do cardápio daquela lista.
+CREATE OR REPLACE FUNCTION validar_item_pedido_no_cardapio()
+RETURNS TRIGGER AS $$
+DECLARE
+    lista_id BIGINT;
+BEGIN
+    SELECT lista_diaria_id INTO lista_id FROM pedidos WHERE id = NEW.pedido_id;
+    IF NOT EXISTS (
+        SELECT 1 FROM lista_produtos
+         WHERE lista_diaria_id = lista_id AND produto_id = NEW.produto_id
+    ) THEN
+        RAISE EXCEPTION 'O produto não pertence ao cardápio do pedido.'
+          USING ERRCODE = '23514', CONSTRAINT = 'ck_item_pedido_no_cardapio';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_item_pedido_no_cardapio ON itens_pedido;
+CREATE TRIGGER trg_item_pedido_no_cardapio
+BEFORE INSERT OR UPDATE OF pedido_id, produto_id ON itens_pedido
+FOR EACH ROW EXECUTE FUNCTION validar_item_pedido_no_cardapio();
 
 -- ==============================================================================
 -- PERFORMANCE E INTEGRIDADE DE NEGÓCIO

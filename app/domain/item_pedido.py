@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from app.domain.exceptions import ValidacaoDeDominioError
+from app.domain.money import numeric_10_2
 
 
 @dataclass(slots=True)
@@ -13,11 +14,13 @@ class ItemPedido:
     pedido_id: int | None = None
 
     def __post_init__(self) -> None:
-        self.preco_unitario = Decimal(str(self.preco_unitario))
+        self.preco_unitario = numeric_10_2(self.preco_unitario, "Preço unitário")
         if self.quantidade <= 0:
             raise ValidacaoDeDominioError(
                 "A quantidade do item deve ser maior que zero."
             )
+        if self.quantidade > 2_147_483_647:
+            raise ValidacaoDeDominioError("Quantidade excede o limite do banco de dados.")
         if self.preco_unitario < 0:
             raise ValidacaoDeDominioError("O preço unitário não pode ser negativo.")
 
