@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivialists - Acesso ao Almoço Impatech</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍱</text></svg>">
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/" class="brand">
+            <div class="brand-icon">T</div>
+            <span class="brand-title">Trivialists</span>
+            <span class="brand-badge">Impatech</span>
+        </a>
+    </header>
+
+    <main class="main-content">
+        <div class="auth-container">
+            
+            <div id="auth-alert" class="alert" role="alert"></div>
+
+            <div class="card">
+                <div class="tabs">
+                    <button type="button" id="tab-login" class="tab-btn active">Entrar</button>
+                    <button type="button" id="tab-cadastro" class="tab-btn">Novo Aluno</button>
+                </div>
+
+                <div class="card-body">
+                    <!-- Formulário de Login (CU08) -->
+                    <div id="form-login-container">
+                        <div class="form-header">
+                            <h2>Bem-vindo de volta</h2>
+                            <p>Entre com seus dados para acessar os cardápios do dia</p>
+                        </div>
+
+                        <form id="form-login">
+                            <div class="form-group">
+                                <label for="login-email">E-mail de Acesso</label>
+                                <input 
+                                    type="email" 
+                                    id="login-email" 
+                                    class="form-control" 
+                                    placeholder="seu.email@exemplo.com" 
+                                    autocomplete="email" 
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="login-senha">Senha</label>
+                                <input 
+                                    type="password" 
+                                    id="login-senha" 
+                                    class="form-control" 
+                                    placeholder="Sua senha secreta" 
+                                    autocomplete="current-password" 
+                                    required
+                                >
+                            </div>
+
+                            <button type="submit" id="btn-entrar" class="btn btn-primary">
+                                Entrar na Plataforma
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Formulário de Cadastro de Novo Aluno (FA01) -->
+                    <div id="form-cadastro-container" style="display: none;">
+                        <div class="form-header">
+                            <h2>Criar Conta de Aluno</h2>
+                            <p>Faça seus pedidos individualmente sem sobrescrever listas no WhatsApp</p>
+                        </div>
+
+                        <form id="form-cadastro">
+                            <div class="form-group">
+                                <label for="cad-nome">Nome Completo</label>
+                                <input 
+                                    type="text" 
+                                    id="cad-nome" 
+                                    class="form-control" 
+                                    placeholder="Ex: Carlos Eduardo Silva" 
+                                    autocomplete="name" 
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cad-email">E-mail</label>
+                                <input 
+                                    type="email" 
+                                    id="cad-email" 
+                                    class="form-control" 
+                                    placeholder="seu.email@exemplo.com" 
+                                    autocomplete="email" 
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cad-telefone">Telefone / WhatsApp</label>
+                                <input 
+                                    type="tel" 
+                                    id="cad-telefone" 
+                                    class="form-control" 
+                                    placeholder="(21) 99999-8888" 
+                                    autocomplete="tel" 
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cad-senha">Senha de Acesso</label>
+                                <input 
+                                    type="password" 
+                                    id="cad-senha" 
+                                    class="form-control" 
+                                    placeholder="Mínimo 6 caracteres" 
+                                    autocomplete="new-password" 
+                                    minlength="6" 
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cad-confirma-senha">Confirmar Senha</label>
+                                <input 
+                                    type="password" 
+                                    id="cad-confirma-senha" 
+                                    class="form-control" 
+                                    placeholder="Repita sua senha" 
+                                    autocomplete="new-password" 
+                                    minlength="6" 
+                                    required
+                                >
+                            </div>
+
+                            <button type="submit" id="btn-cadastrar" class="btn btn-primary">
+                                Criar Conta de Aluno
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        Trivialists &bull; Plataforma de Almoço dos Estudantes Impatech &bull; 2026
+    </footer>
+
+    <script src="/static/js/session.js"></script>
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>
