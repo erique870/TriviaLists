@@ -2,6 +2,110 @@
 
 *Erique Silva Gustavo Cardoso Paulo Oliveira* · Turma: 2024 - Ênfase em Ciência da Computação
 
+## Executar a implementação
+
+A implementação atual usa **Python 3.11+, FastAPI, PostgreSQL e HTML/CSS/JavaScript**. Os CU01 a CU08 estão conectados à API e às telas. A API documentada fica em `/docs`; o acesso começa em `/`.
+
+### Demonstração local sem banco
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+DATABASE_URL='' APP_DEMO=true uvicorn app.main:app --reload
+```
+
+Abra `http://localhost:8000`. As contas de demonstração usam a senha `demo12345`:
+
+| Perfil | E-mail |
+| --- | --- |
+| Parceiro Salsalito | salsalito@exemplo.com |
+| Parceiro Pilograma | pilograma@exemplo.com |
+| Parceiro Tapioca | tapioca@exemplo.com |
+| Aluno | aluno@impatech.edu.br |
+
+O parceiro cadastra produtos, seleciona-os e publica a lista. Em outra sessão/navegador, o aluno consulta o cardápio, informa quantidades e confirma ou cancela o pedido. O parceiro fecha a lista e recebe o relatório, que também pode ser impresso. Há configuração dos horários padrão e horários específicos por lista.
+
+Para concluir a entrega, o parceiro clica em **Pedidos e retiradas** na lista desejada e, ao entregar a refeição ao aluno identificado, usa **Confirmar retirada** no pedido. A retirada passa de `PENDENTE` para `RETIRADO`, e o pedido aparece como **CONCLUÍDO** para o parceiro e para o aluno. A confirmação é permitida somente ao restaurante responsável, não depende de a lista estar aberta ou fechada e não aceita pedidos cancelados. Repetir a confirmação não duplica a operação. Um pedido retirado não pode ser cancelado nem permite outro pedido ativo na mesma lista; seus itens, valores e participação no relatório de produção são preservados. O aluno acompanha a atualização em **Meus pedidos**, pelo botão Atualizar ou pela consulta automática a cada 30 segundos.
+
+Em **Cadastro de produtos**, o botão **Excluir** remove definitivamente um produto após confirmação, desde que ele ainda não tenha sido vinculado a nenhuma lista ou pedido. Produtos já usados, inclusive em listas fechadas e pedidos cancelados, devem ser **desativados** para preservar o histórico. Cada parceiro só pode excluir produtos do próprio restaurante.
+
+O modo em memória é descartável: os dados são perdidos ao reiniciar. `APP_DEMO` só cria contas quando não há `DATABASE_URL`. Nenhuma conta de demonstração é criada automaticamente no banco externo.
+
+### PostgreSQL / Supabase
+
+Copie `.env.example` para `.env`, configure `DATABASE_URL` com a URI PostgreSQL e escolha um `JWT_SECRET_KEY` próprio. No Supabase, use a conexão PostgreSQL do projeto/pooler, com TLS (`sslmode=require`), em vez da URL da API REST. Senhas com caracteres especiais devem estar codificadas na URI.
+
+Execute `database/schema.sql` no banco. **Em bancos existentes, execute novamente o schema atualizado** para criar as tabelas de eventos/notificações e o índice de e-mail normalizado. A inicialização não aplica migrações automaticamente. `database/seed.sql` é opcional e contém contas de teste; novos parceiros devem ser vinculados ao restaurante diretamente no banco, conforme o escopo do projeto. O seed documenta suas próprias credenciais.
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Ao configurar um banco, falhas de conexão impedem a inicialização; não há troca silenciosa para memória. Em produção, execute a aplicação atrás de HTTPS e use o mesmo segredo JWT em todas as instâncias.
+
+### Docker Compose
+
+```bash
+docker compose up --build
+docker compose --profile test run --build --rm tests
+```
+
+A aplicação fica em `http://localhost:8001`. O Compose fornece PostgreSQL persistente e inicializa schema/seed no primeiro uso de um volume vazio. As credenciais do serviço local são apenas de desenvolvimento. Se o volume já existir, atualize o schema sem apagar dados:
+
+```bash
+docker compose exec -T db psql -U trivialists -d trivialists -v ON_ERROR_STOP=1 < database/schema.sql
+```
+
+### Fechamento e notificações
+
+O servidor usa `APP_TIMEZONE` (padrão `America/Sao_Paulo`). Pedidos e cancelamentos são aceitos apenas em listas ABERTAS, depois da abertura e **antes** do fechamento. A RN02 estende o prazo de cardápios variáveis publicados no dia a partir do corte padrão para 30 minutos após a publicação. Não se pode reabrir uma lista vencida.
+
+Uma rotina executada a cada `WORKER_INTERVAL_SECONDS` (30 segundos por padrão) fecha listas vencidas e consolida a produção. A validação do prazo ocorre em cada operação, independentemente dessa rotina. Transações e bloqueios por lista coordenam pedidos, cancelamentos e fechamentos concorrentes; o índice único parcial do banco também protege a RN03.
+
+A publicação grava um evento na mesma transação da lista. Em segundo plano, os avisos são distribuídos à caixa de notificações dos alunos cadastrados; a tela consulta atualizações a cada 30 segundos. A fila no PostgreSQL sobrevive a reinicializações.
+
+Para integrar um serviço externo de push, configure `NOTIFICATION_WEBHOOK_URL` e, opcionalmente, `NOTIFICATION_WEBHOOK_TOKEN`. O servidor envia um POST JSON com `evento_id`, `tipo=cardapio_publicado`, `lista_id`, `restaurante_id`, `restaurante`, `data` e `url`. O destino deve administrar seus inscritos e entregar o push. Há cabeçalho `Idempotency-Key: cardapio-<evento_id>` e repetição com espera progressiva em caso de falha; o destinatário deve deduplicar os eventos. Sem essa configuração, os avisos permanecem disponíveis dentro da aplicação, sem push fora dela.
+
+### API dos casos de uso
+
+As rotas abaixo exigem `Authorization: Bearer <token>`. O usuário e o restaurante são obtidos da sessão; campos extras como `usuario_id`, `restaurante_id` ou preços enviados junto do pedido são recusados.
+
+| CU | Rotas principais |
+| --- | --- |
+| CU01 | `GET /api/restaurantes`, `GET /api/listas?restaurante_id=...` |
+| CU02 | `POST /api/pedidos`, `GET /api/pedidos`, `GET /api/pedidos/{id}` |
+| CU03 | `POST /api/pedidos/{id}/cancelar` |
+| CU04 | `POST /api/parceiro/listas`, `GET /api/notificacoes` |
+| CU05 | `POST /api/parceiro/listas/{id}/abrir`, `POST /api/parceiro/listas/{id}/fechar` |
+| CU06 | `GET /api/parceiro/listas/{id}/relatorio`; também retornado ao fechar |
+| CU07 | `GET/POST /api/parceiro/produtos`, `PATCH/DELETE /api/parceiro/produtos/{id}` |
+| CU08 | `POST /auth/login`, `POST /auth/cadastro`, `GET /auth/me` |
+
+O parceiro também consulta `/api/parceiro/restaurante`, altera os horários em `PATCH /api/parceiro/restaurante/horarios` e consulta seu histórico em `GET /api/parceiro/listas`. O aluno marca avisos como lidos em `POST /api/notificacoes/{id}/ler`.
+
+A consulta das entregas usa `GET /api/parceiro/listas/{lista_id}/pedidos` e a conclusão usa `POST /api/parceiro/listas/{lista_id}/pedidos/{pedido_id}/retirada`. As duas rotas exigem sessão de parceiro vinculado ao restaurante da lista. `CONCLUÍDO` é a apresentação do pedido `ATIVO` com retirada `RETIRADO`; o modelo existente e os relatórios continuam contabilizando esse pedido normalmente. Não é necessária uma nova migração de banco para esta função.
+
+### Testes
+
+```bash
+DATABASE_URL='' python -m pytest -q
+TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/banco_teste' DATABASE_URL='' python -m pytest -q
+```
+
+Sem `TEST_DATABASE_URL`, os cenários PostgreSQL são ignorados. Com ela, os testes criam schemas isolados `teste_<uuid>` e os removem ao terminar; a conta de teste precisa ter permissão para criar schemas. Os fluxos de aceitação são exercitados com os mesmos testes nos adaptadores de memória e PostgreSQL. A CI usa PostgreSQL real.
+
+O teste opcional das telas usa Playwright, duas sessões independentes e uma tela de aluno com largura de celular:
+
+```bash
+pip install -e '.[dev,browser]'
+playwright install chromium
+RUN_BROWSER_TESTS=1 DATABASE_URL='' python -m pytest -q tests/test_browser.py
+```
+
+Se houver Chrome instalado, o teste o utiliza. `CHROME_PATH` permite informar outro executável; `BROWSER_ARTIFACT_DIR` permite salvar uma captura do relatório.
+
 # Visão geral do projeto
 
 <a id="sec:visaogeral"></a>
@@ -192,7 +296,7 @@ A Figura [fig:casosdeuso](#fig%3Acasosdeuso) apresenta o diagrama de casos de u
 
 1. O Cliente seleciona um ou mais itens (Produto) do cardápio e especifica as quantidades.
 2. O Cliente clica em “Confirmar Pedido”.
-3. O sistema executa o caso de uso de validação interna (Validar Horário de Fechamento), verificando se a hora atual é menor ou igual ao horarioFechamento da ListaDiaria.
+3. O sistema executa o caso de uso de validação interna (Validar Horário de Fechamento), verificando se a hora atual é estritamente menor que o horarioFechamento da ListaDiaria, conforme a RN04.
 4. O sistema verifica a RN03 para garantir que não há outro pedido ativo do mesmo Cliente para aquela ListaDiaria.
 5. O sistema instancia o objeto Pedido com status ATIVO e status de retirada PENDENTE, e calcula o valorTotal com base nos objetos ItemPedido. O preço unitário de cada item é copiado do Produto no momento da gravação, de modo que alterações posteriores no cardápio não alterem pedidos já registrados.
 6. O sistema exibe a confirmação na tela do Cliente com o identificador (id) do pedido.
@@ -290,7 +394,7 @@ A Figura [fig:casosdeuso](#fig%3Acasosdeuso) apresenta o diagrama de casos de u
 **Requisitos Funcionais**: RF02 (Cadastrar Cardápio Diário).\
 **Regras de Negócio**: RN05 (Escopo de Acesso).\
 **Pré-condições**: O Restaurante deve estar autenticado.\
-**Pós-condições**: Os objetos da classe Produto são criados, atualizados ou desativados.\
+**Pós-condições**: Os objetos da classe Produto são criados, atualizados, desativados ou excluídos quando ainda não possuem vínculos com listas ou pedidos.\
 **Fluxo Principal**:
 
 1. O Restaurante acessa o menu “Cadastro de Produtos”.
@@ -298,10 +402,14 @@ A Figura [fig:casosdeuso](#fig%3Acasosdeuso) apresenta o diagrama de casos de u
 3. O operador preenche os atributos: nome, descricao, preco e o flag disponivel (Boolean).
 4. O sistema grava as atualizações da entidade Produto no banco de dados.
 
-**Fluxos Alternativos**: Não possui.\
+**Fluxos Alternativos**:
+
+1. **FA01 (Excluir Produto Não Utilizado)**: O parceiro clica em “Excluir” e confirma a ação. O sistema verifica se o produto pertence ao restaurante da sessão e se não possui vínculos com listas ou pedidos. Satisfeitas as condições, o produto é removido definitivamente do catálogo e da seleção de produtos para novas listas.
+
 **Fluxos de Exceção**:
 
 1. **FE01 (Dados Incompletos)**: Caso o preço informado seja negativo ou o nome esteja em branco, o sistema impede o salvamento e indica os campos com erro.
+2. **FE02 (Produto em Uso)**: Se o produto estiver vinculado a qualquer lista ou pedido, inclusive listas fechadas ou pedidos cancelados, o sistema recusa a exclusão com código `409 Conflict` e orienta o parceiro a desativá-lo.
 
 **CU08**: Autenticar Usuário.\
 **Ator/Atores**: Cliente, Restaurante (Parceiro).\
@@ -417,11 +525,11 @@ A divisão de responsabilidades foi modularizada em componentes bem delimitados:
 
 - **Módulo de Apresentação do Cliente (Aluno)**: Interface minimalista projetada para telas de celulares. Permite visualização dos cardápios fixos e variáveis, seleção de variações com poucos toques e consulta/cancelamento do pedido do dia se dentro do tempo.
 - **Módulo de Apresentação do Parceiro (Restaurante)**: Painel de controle administrativo simplificado para postagem ágil do cardápio matinal, configuração de horários de corte e visualização/impressão da lista consolidada de produção para a cozinha.
-- **API REST (*Serverless Handler*)**: Ponto de entrada único das requisições HTTP. Responde pelas rotas sob `/api`, encaminha cada chamada ao componente responsável e traduz o resultado em códigos de resposta HTTP. Não contém regra de negócio.
+- **API REST (FastAPI)**: Ponto de entrada único das requisições HTTP. Responde pelas rotas sob `/api`, encaminha cada chamada ao componente responsável e traduz o resultado em códigos de resposta HTTP. Não contém regra de negócio.
 - **Controlador de Autenticação e Sessão**: Gerencia tokens de acesso seguros, validando se o usuário possui permissão de aluno ou de parceiro comercial. É também onde se aplica a RN05: o identificador do restaurante administrado por um parceiro é extraído da sessão, nunca da requisição.
 - **Módulo de Regras de Negócio e Pedidos**: Na parte do servidor, processa as solicitações e valida se o pedido do aluno respeita as regras de negócio, como a regra de pedido único ativo por restaurante (RN03) e assegura que a submissão ocorreu antes do horário de corte estabelecido (RN01 e RN02). É também o responsável pela consolidação do relatório de produção (RF05). Nenhuma regra de negócio é verificada fora deste componente.
 - **Serviço de Notificação**: Responsável pelo RF06. Identifica os clientes inscritos em um restaurante e despacha as notificações de publicação de cardápio de forma assíncrona, por meio de um serviço externo de *push*, sem bloquear a resposta ao parceiro.
-- **Camada de Acesso a Dados**: Concentra as consultas e gravações no banco relacional e o gerenciamento do *pool* de conexões. Isolá-la em um único módulo é o que permite controlar o número de conexões simultâneas abertas pelas funções *serverless* nos horários de pico (RNF03).
+- **Camada de Acesso a Dados**: Concentra as consultas e gravações no banco relacional e o gerenciamento do *pool* de conexões. Isolá-la em um único módulo permite controlar o número de conexões simultâneas abertas pelo servidor nos horários de pico (RNF03).
 
 ## Relacionamento e Comunicação entre Componentes
 
@@ -449,11 +557,11 @@ As tecnologias foram escolhidas visando extrema leveza, execução nativa sem de
   - **HTML5 e CSS3 puro**: Construção da interface com semântica estrita, usando CSS Grid e Flexbox para layout responsivo, sem dependência de pré-processadores ou bibliotecas utilitárias.
   - **JavaScript Vanilla**: Manipulação direta do DOM e comunicação assíncrona nativa com o servidor através da `Fetch API`.
 - **Backend**:
-  - **Node.js**: Funcionará como um conjunto de APIs, onde cada rota da API é um script JavaScript simplificado designado para controle e gerenciamento das requisições respectivas. A validação de token e o acesso ao banco ficam em módulos compartilhados, evitando sua duplicação em cada rota.
+  - **Python / FastAPI**: Rotas HTTP com validação de entrada, serviços de aplicação e entidades de domínio. Autenticação e persistência são compartilhadas pelas rotas; o servidor ASGI é executado com Uvicorn.
 - **Banco de Dados**:
-  - **MySQL**: Banco de dados relacional clássico e consolidado na indústria, com suporte nativo a chaves estrangeiras e restrições de integridade.
+  - **PostgreSQL / Supabase**: Persistência relacional via psycopg, com pool de conexões, transações e índice único parcial para pedidos ativos.
 - **Hospedagem e Deploy**:
-  - **Vercel**: O repositório centraliza o frontend estático e as funções serverless. O Vercel serve os arquivos estáticos e executa as funções da pasta `/api` com latência de inicialização mínima, provendo certificado HTTPS automático. O banco de dados é hospedado em serviço externo, acessado por meio de *pool* de conexões compatível com execução *serverless*.
+  - **Docker / ASGI**: O mesmo servidor entrega os arquivos estáticos, a autenticação e as rotas `/api`. A rotina de encerramento e notificações requer um processo persistente. O Compose fornece PostgreSQL local; um banco externo pode ser configurado pela URI. HTTPS deve ser configurado na infraestrutura de produção.
 
 ## Persistência de Dados
 
@@ -467,11 +575,12 @@ O modelo relacional deriva diretamente do diagrama de classes da Figura [fig:cl
 - **Pedido**: identificador, referência ao usuário e à lista diária, timestamp da solicitação, valor total, status (**ATIVO** ou **CANCELADO**) e status de retirada (**PENDENTE** ou **RETIRADO**).
 - **ItemPedido**: identificador, referência ao pedido e ao produto, quantidade e preço unitário. O preço é copiado do Produto no momento da gravação e não referenciado, de modo que reajustes posteriores no cardápio não alterem o valor de pedidos já registrados.
 
-A RN03 é assegurada pelo próprio banco por meio de uma restrição de unicidade sobre `(usuario\_id, lista\_diaria\_id)`. Como pedidos cancelados não devem impedir que o cliente registre um novo pedido, a restrição precisa ignorá-los. O MySQL não oferece índices únicos parciais, mas admite múltiplos valores nulos em um índice único; emprega-se, portanto, uma coluna gerada que assume valor nulo quando o pedido está cancelado:
+A RN03 é assegurada pelo próprio banco por meio de uma restrição de unicidade sobre `(usuario\_id, lista\_diaria\_id)`. Como pedidos cancelados não devem impedir que o cliente registre um novo pedido, a restrição precisa ignorá-los. O PostgreSQL oferece índices únicos parciais; a implementação aplica a unicidade somente aos pedidos ativos:
 
-```
-ativo TINYINT AS (IF(status = 'CANCELADO', NULL, 1)) STORED,
-UNIQUE KEY uk_pedido_ativo (usuario_id, lista_diaria_id, ativo)
+```sql
+CREATE UNIQUE INDEX uk_pedido_ativo
+ON pedidos (usuario_id, lista_diaria_id)
+WHERE status = 'ATIVO';
 ```
 A chave é composta por `lista\_diaria\_id`, e não por restaurante e data, porque é a lista diária que identifica de forma única a refeição de um restaurante em uma data — permitindo, se necessário, mais de uma lista por dia para o mesmo estabelecimento.
 
@@ -482,9 +591,9 @@ A Tabela [tab:rnf-arquitetura](#tab%3Arnf-arquitetura) detalha como as decisõe
 l p3.2cm X **RNF** & **Critério Definido** & **Sustentação na Arquitetura**\
 **RNF01** (Desempenho) & Resposta em até 2.0s para 95%das requisições & Frontend estático sem sobrecarga de frameworks, entregue via CDN; consultas SQL simples e indexadas por data e por lista diária.\
 **RNF02** (Usabilidade) & Mobile-First com 100%de responsividade & Folhas de estilo em CSS3 nativo com *media queries* sob medida para smartphones; interface limpa inspirada na agilidade do WhatsApp.\
-**RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & Arquitetura *serverless* no Vercel com escalabilidade elástica automática para absorver os picos matinais; acesso ao banco concentrado em um único módulo, com *pool* de conexões dimensionado para o limite do servidor MySQL.\
+**RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & Processo ASGI com reinicialização no Compose; acesso ao PostgreSQL por pool de conexões. A meta de disponibilidade depende da hospedagem e ainda precisa de medição operacional.\
 \
-**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Tráfego estritamente protegido sob protocolo HTTPS nativo do Vercel; senhas armazenadas como *hash* com sal (bcrypt ou Argon2), não recuperáveis nem pela equipe; acesso aos dados restrito pelo escopo definido na RN05.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
+**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas com scrypt e sal; acesso restrito pela RN05. A implantação de produção deve configurar HTTPS; Argon2/bcrypt permanecem alternativas previstas pelo requisito original.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
 
 # Lições Aprendidas
 

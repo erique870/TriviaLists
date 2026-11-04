@@ -14,11 +14,11 @@ class ItemPedido:
 
     def __post_init__(self) -> None:
         self.preco_unitario = Decimal(str(self.preco_unitario))
-        if self.quantidade <= 0:
+        if not isinstance(self.quantidade, int) or isinstance(self.quantidade, bool) or self.quantidade <= 0:
             raise ValidacaoDeDominioError(
                 "A quantidade do item deve ser maior que zero."
             )
-        if self.preco_unitario < 0:
+        if not self.preco_unitario.is_finite() or self.preco_unitario < 0:
             raise ValidacaoDeDominioError("O preço unitário não pode ser negativo.")
 
     def calcular_subtotal(self) -> Decimal:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from decimal import Decimal
 
@@ -30,9 +32,32 @@ class RepositoriosPostgres:
 
     def __init__(self, pool: ConnectionPool) -> None:
         self.pool = pool
+        self._conexao = ContextVar(f"conexao_{id(self)}", default=None)
+
+    @contextmanager
+    def conexao(self):
+        atual = self._conexao.get()
+        if atual is not None:
+            yield atual
+        else:
+            with self.pool.connection() as conn:
+                yield conn
+
+    @contextmanager
+    def transacao(self):
+        if self._conexao.get() is not None:
+            yield
+            return
+        with self.pool.connection() as conn:
+            token = self._conexao.set(conn)
+            try:
+                with conn.transaction():
+                    yield
+            finally:
+                self._conexao.reset(token)
 
     def obter_por_id(self, usuario_id: int) -> Usuario | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM usuarios WHERE id = %s", (usuario_id,))
             row = cur.fetchone()
         if row is None:
@@ -44,7 +69,7 @@ class RepositoriosPostgres:
         )
 
     def obter_usuario_por_email(self, email: str) -> Usuario | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM usuarios WHERE LOWER(email) = LOWER(%s)", (email.strip(),))
             row = cur.fetchone()
         if row is None:
@@ -56,7 +81,7 @@ class RepositoriosPostgres:
         )
 
     def salvar_usuario(self, usuario: Usuario) -> Usuario:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             if usuario.id is None or usuario.id == 0:
                 cur.execute(
                     """INSERT INTO usuarios (nome, email, senha_hash, telefone, papel, restaurante_id)
@@ -66,7 +91,6 @@ class RepositoriosPostgres:
                      usuario.telefone, usuario.papel.value, usuario.restaurante_id),
                 )
                 novo_id = cur.fetchone()["id"]
-                conn.commit()
                 return Usuario(
                     id=novo_id, nome=usuario.nome, email=usuario.email.strip().lower(),
                     senha_hash=usuario.senha_hash, telefone=usuario.telefone,
@@ -74,16 +98,17 @@ class RepositoriosPostgres:
                 )
             else:
                 cur.execute(
-                    """UPDATE usuarios SET nome=%s, email=%s, senha_hash=%s,
-                       telefone=%s, papel=%s, restaurante_id=%s WHERE id=%s""",
-                    (usuario.nome, usuario.email.strip().lower(), usuario.senha_hash,
-                     usuario.telefone, usuario.papel.value, usuario.restaurante_id, usuario.id),
+                    """INSERT INTO usuarios (id, nome, email, senha_hash, telefone, papel, restaurante_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (id) DO UPDATE
+                       SET nome=EXCLUDED.nome, email=EXCLUDED.email, senha_hash=EXCLUDED.senha_hash,
+                       telefone=EXCLUDED.telefone, papel=EXCLUDED.papel, restaurante_id=EXCLUDED.restaurante_id""",
+                    (usuario.id, usuario.nome, usuario.email.strip().lower(), usuario.senha_hash,
+                     usuario.telefone, usuario.papel.value, usuario.restaurante_id),
                 )
-                conn.commit()
                 return usuario
 
     def obter_restaurante(self, restaurante_id: int) -> Restaurante | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM restaurantes WHERE id = %s", (restaurante_id,))
             row = cur.fetchone()
         if row is None:
@@ -96,32 +121,40 @@ class RepositoriosPostgres:
         )
 
     def salvar_restaurante(self, restaurante: Restaurante) -> None:
-        with self.pool.connection() as conn:
+        with self.conexao() as conn:
             conn.execute(
-                """UPDATE restaurantes SET nome=%s, endereco=%s,
-                   horario_padrao_abertura=%s, horario_padrao_fechamento=%s,
-                   tipo_cardapio=%s, ativo=%s WHERE id=%s""",
-                (restaurante.nome, restaurante.endereco,
+                """INSERT INTO restaurantes (id, nome, endereco, horario_padrao_abertura,
+                   horario_padrao_fechamento, tipo_cardapio, ativo) VALUES (%s,%s,%s,%s,%s,%s,%s)
+                   ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome, endereco=EXCLUDED.endereco,
+                   horario_padrao_abertura=EXCLUDED.horario_padrao_abertura,
+                   horario_padrao_fechamento=EXCLUDED.horario_padrao_fechamento,
+                   tipo_cardapio=EXCLUDED.tipo_cardapio, ativo=EXCLUDED.ativo""",
+                (restaurante.id, restaurante.nome, restaurante.endereco,
                  restaurante.horario_padrao_abertura, restaurante.horario_padrao_fechamento,
-                 restaurante.tipo_cardapio.value, restaurante.ativo, restaurante.id),
+                 restaurante.tipo_cardapio.value, restaurante.ativo),
             )
+
+    def listar_restaurantes_ativos(self) -> list[Restaurante]:
+        with self.conexao() as conn:
+            ids = [row[0] for row in conn.execute("SELECT id FROM restaurantes WHERE ativo ORDER BY nome").fetchall()]
+        return [self.obter_restaurante(rid) for rid in ids]
 
     def proximo_id_produto(self) -> int:
         return self._proximo_id("produtos_id_seq")
 
     def obter_produto(self, produto_id: int) -> Produto | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-            cur.execute("SELECT * FROM produtos WHERE id = %s", (produto_id,))
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("SELECT * FROM produtos WHERE id = %s" + (" FOR UPDATE" if self._conexao.get() is not None else ""), (produto_id,))
             row = cur.fetchone()
         return self._produto(row) if row else None
 
     def listar_por_restaurante(self, restaurante_id: int) -> list[Produto]:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM produtos WHERE restaurante_id = %s ORDER BY id", (restaurante_id,))
             return [self._produto(row) for row in cur.fetchall()]
 
     def salvar_produto(self, produto: Produto) -> None:
-        with self.pool.connection() as conn:
+        with self.conexao() as conn:
             conn.execute(
                 """INSERT INTO produtos (id, restaurante_id, nome, descricao, preco, disponivel)
                    VALUES (%s, %s, %s, %s, %s, %s)
@@ -135,11 +168,30 @@ class RepositoriosPostgres:
     def proximo_id_lista(self) -> int:
         return self._proximo_id("listas_diarias_id_seq")
 
+    def excluir_produto(self, produto_id: int) -> bool:
+        with self.conexao() as conn:
+            resultado = conn.execute(
+                """DELETE FROM produtos WHERE id=%s
+                   AND NOT EXISTS (SELECT 1 FROM lista_produtos WHERE produto_id=produtos.id)
+                   AND NOT EXISTS (SELECT 1 FROM itens_pedido WHERE produto_id=produtos.id)""",
+                (produto_id,),
+            )
+            return resultado.rowcount > 0
+
+    def produto_em_uso(self, produto_id: int) -> bool:
+        with self.conexao() as conn:
+            row = conn.execute(
+                """SELECT EXISTS (SELECT 1 FROM lista_produtos WHERE produto_id=%s)
+                       OR EXISTS (SELECT 1 FROM itens_pedido WHERE produto_id=%s)""",
+                (produto_id, produto_id),
+            ).fetchone()
+            return bool(row[0])
+
     def proximo_id_pedido(self) -> int:
         return self._proximo_id("pedidos_id_seq")
 
     def obter_pedido(self, pedido_id: int) -> Pedido | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM pedidos WHERE id=%s", (pedido_id,))
             row = cur.fetchone()
             if row is None:
@@ -166,7 +218,7 @@ class RepositoriosPostgres:
         )
 
     def listar_pedidos_por_usuario(self, usuario_id: int) -> list[Pedido]:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
                 "SELECT id FROM pedidos WHERE usuario_id=%s ORDER BY data_hora_pedido DESC, id DESC",
                 (usuario_id,),
@@ -177,7 +229,7 @@ class RepositoriosPostgres:
 
     def salvar_pedido(self, pedido: Pedido) -> None:
         try:
-            with self.pool.connection() as conn:
+            with self.conexao() as conn, conn.cursor() as cur:
                 conn.execute(
                     """INSERT INTO pedidos
                        (id, lista_diaria_id, usuario_id, data_hora_pedido, valor_total,
@@ -190,7 +242,7 @@ class RepositoriosPostgres:
                      pedido.status_retirada.value),
                 )
                 conn.execute("DELETE FROM itens_pedido WHERE pedido_id=%s", (pedido.id,))
-                conn.executemany(
+                cur.executemany(
                     """INSERT INTO itens_pedido
                        (pedido_id, produto_id, quantidade, preco_unitario)
                        VALUES (%s, %s, %s, %s)""",
@@ -202,9 +254,15 @@ class RepositoriosPostgres:
                 raise PedidoAtivoExistenteError() from erro
             raise
 
+    def salvar_retirada(self, pedido: Pedido) -> None:
+        """Atualiza a entrega preservando os itens e valores originais do pedido."""
+        with self.conexao() as conn:
+            conn.execute("UPDATE pedidos SET status_retirada=%s WHERE id=%s",
+                         (pedido.status_retirada.value, pedido.id))
+
     def obter_lista(self, lista_id: int) -> ListaDiaria | None:
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-            cur.execute("SELECT * FROM listas_diarias WHERE id = %s", (lista_id,))
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("SELECT * FROM listas_diarias WHERE id = %s" + (" FOR UPDATE" if self._conexao.get() is not None else ""), (lista_id,))
             row = cur.fetchone()
             if row is None:
                 return None
@@ -262,14 +320,14 @@ class RepositoriosPostgres:
         self, data_hora: datetime, restaurante_id: int | None = None
     ) -> list[ListaDiaria]:
         sql = """SELECT id FROM listas_diarias
-                 WHERE status='ABERTA' AND horario_abertura <= %s
+                 WHERE status='ABERTA' AND EXISTS (SELECT 1 FROM restaurantes r WHERE r.id=listas_diarias.restaurante_id AND r.ativo) AND horario_abertura <= %s
                    AND horario_fechamento > %s"""
         params: tuple = (data_hora, data_hora)
         if restaurante_id is not None:
             sql += " AND restaurante_id=%s"
             params += (restaurante_id,)
         sql += " ORDER BY horario_fechamento, id"
-        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        with self.conexao() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(sql, params)
             lista_ids = [row["id"] for row in cur.fetchall()]
         return [lista for lista_id in lista_ids
@@ -277,7 +335,7 @@ class RepositoriosPostgres:
 
     def salvar_lista(self, lista: ListaDiaria) -> None:
         """Salva lista e vínculos em uma transação."""
-        with self.pool.connection() as conn:
+        with self.conexao() as conn, conn.cursor() as cur:
             conn.execute(
                 """INSERT INTO listas_diarias
                    (id, restaurante_id, data, horario_abertura, horario_fechamento, status)
@@ -290,14 +348,27 @@ class RepositoriosPostgres:
                  lista.horario_fechamento, lista.status.value),
             )
             conn.execute("DELETE FROM lista_produtos WHERE lista_diaria_id=%s", (lista.id,))
-            conn.executemany(
+            cur.executemany(
                 "INSERT INTO lista_produtos (lista_diaria_id, produto_id) VALUES (%s, %s)",
                 [(lista.id, produto_id) for produto_id in lista.produtos],
             )
 
+    def listar_listas_restaurante(self, restaurante_id: int) -> list[ListaDiaria]:
+        with self.conexao() as conn:
+            ids = [row[0] for row in conn.execute(
+                "SELECT id FROM listas_diarias WHERE restaurante_id=%s ORDER BY data DESC, id DESC", (restaurante_id,)).fetchall()]
+        return [self.obter_lista(lid) for lid in ids]
+
+    def listar_listas_expiradas(self, data_hora: datetime) -> list[ListaDiaria]:
+        with self.conexao() as conn:
+            ids = [row[0] for row in conn.execute(
+                "SELECT id FROM listas_diarias WHERE status='ABERTA' AND horario_fechamento <= %s ORDER BY id FOR UPDATE SKIP LOCKED",
+                (data_hora,)).fetchall()]
+        return [self.obter_lista(lid) for lid in ids]
+
     def _proximo_id(self, sequence: str) -> int:
         # O nome de sequence é selecionado internamente, nunca vem de entrada HTTP.
-        with self.pool.connection() as conn:
+        with self.conexao() as conn:
             row = conn.execute("SELECT nextval(%s::regclass)", (sequence,)).fetchone()
         return int(row[0])
 
@@ -334,6 +405,9 @@ class RepositorioRestaurantePostgres:
     def salvar(self, restaurante: Restaurante) -> None:
         self.db.salvar_restaurante(restaurante)
 
+    def listar_ativos(self) -> list[Restaurante]:
+        return self.db.listar_restaurantes_ativos()
+
 
 class RepositorioProdutoPostgres:
     def __init__(self, db: RepositoriosPostgres) -> None:
@@ -350,6 +424,9 @@ class RepositorioProdutoPostgres:
 
     def salvar(self, produto: Produto) -> None:
         self.db.salvar_produto(produto)
+
+    def excluir(self, produto_id: int) -> bool:
+        return self.db.excluir_produto(produto_id)
 
 
 class RepositorioListaDiariaPostgres:
@@ -370,6 +447,15 @@ class RepositorioListaDiariaPostgres:
     def salvar(self, lista: ListaDiaria) -> None:
         self.db.salvar_lista(lista)
 
+    def listar_por_restaurante(self, restaurante_id: int) -> list[ListaDiaria]:
+        return self.db.listar_listas_restaurante(restaurante_id)
+
+    def listar_expiradas(self, data_hora: datetime) -> list[ListaDiaria]:
+        return self.db.listar_listas_expiradas(data_hora)
+
+    def produto_em_uso(self, produto_id: int) -> bool:
+        return self.db.produto_em_uso(produto_id)
+
 
 class RepositorioPedidoPostgres:
     def __init__(self, db: RepositoriosPostgres) -> None:
@@ -386,3 +472,6 @@ class RepositorioPedidoPostgres:
 
     def salvar(self, pedido: Pedido) -> None:
         self.db.salvar_pedido(pedido)
+
+    def salvar_retirada(self, pedido: Pedido) -> None:
+        self.db.salvar_retirada(pedido)

@@ -7,6 +7,7 @@ EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class CadastroAlunoRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     nome: str = Field(..., min_length=2, max_length=150, description="Nome completo do aluno")
     email: str = Field(..., description="E-mail válido do aluno")
     telefone: str = Field(..., min_length=8, max_length=20, description="Telefone ou WhatsApp para contato")

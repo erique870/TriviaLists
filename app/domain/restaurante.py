@@ -28,6 +28,8 @@ class Restaurante:
         dia: date,
         produtos: list[Produto],
         publicada_em: datetime,
+        horario_abertura: time | None = None,
+        horario_fechamento: time | None = None,
     ) -> ListaDiaria:
         if not self.ativo:
             raise ValidacaoDeDominioError(
@@ -36,15 +38,18 @@ class Restaurante:
             )
 
         abertura = datetime.combine(
-            dia, self.horario_padrao_abertura, tzinfo=publicada_em.tzinfo
+            dia, horario_abertura or self.horario_padrao_abertura, tzinfo=publicada_em.tzinfo
         )
         fechamento = datetime.combine(
-            dia, self.horario_padrao_fechamento, tzinfo=publicada_em.tzinfo
+            dia, horario_fechamento or self.horario_padrao_fechamento, tzinfo=publicada_em.tzinfo
         )
         if fechamento <= abertura:
-            fechamento += timedelta(days=1)
-        if self.tipo_cardapio == TipoCardapio.VARIAVEL and publicada_em > fechamento:
+            raise ValidacaoDeDominioError("Fechamento deve ocorrer após a abertura.")
+        corte_padrao = datetime.combine(dia, self.horario_padrao_fechamento, tzinfo=publicada_em.tzinfo)
+        if dia == publicada_em.date() and self.tipo_cardapio == TipoCardapio.VARIAVEL and publicada_em >= corte_padrao:
             fechamento = publicada_em + timedelta(minutes=30)
+        if fechamento <= publicada_em:
+            raise ValidacaoDeDominioError("O horário de fechamento já foi ultrapassado.", codigo="fechamento_no_passado")
 
         lista = ListaDiaria(
             id=lista_id,

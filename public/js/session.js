@@ -1,21 +1,15 @@
-/**
- * TRIVIALISTS - Gerenciamento de Sessão e Guarda de Rotas no Cliente
- */
-
+/** Sessão validada no servidor e chamadas autenticadas compartilhadas. */
 const CHAVE_TOKEN = 'trivialists_token';
 const CHAVE_USUARIO = 'trivialists_usuario';
 
 function obterSessao() {
     const token = localStorage.getItem(CHAVE_TOKEN);
-    const usuarioRaw = localStorage.getItem(CHAVE_USUARIO);
-    if (!token || !usuarioRaw) {
-        return null;
-    }
     try {
-        const usuario = JSON.parse(usuarioRaw);
-        return { token, usuario };
+        const usuario = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
+        return token && usuario ? { token, usuario } : null;
     } catch {
-        encerrarSessao();
+        localStorage.removeItem(CHAVE_TOKEN);
+        localStorage.removeItem(CHAVE_USUARIO);
         return null;
     }
 }
@@ -25,52 +19,85 @@ function salvarSessao(token, usuario) {
     localStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario));
 }
 
-function encerrarSessao() {
+function encerrarSessao(motivo = 'sessao_encerrada') {
     localStorage.removeItem(CHAVE_TOKEN);
     localStorage.removeItem(CHAVE_USUARIO);
-    window.location.href = '/?msg=sessao_encerrada';
+    window.location.href = '/?msg=' + encodeURIComponent(motivo);
 }
 
-function protegerRota(papelEsperado) {
+async function validarSessao() {
+    const sessao = obterSessao();
+    if (!sessao) return null;
+    const resposta = await fetch('/auth/me', { headers: { Authorization: `Bearer ${sessao.token}` } });
+    if (resposta.status === 401) {
+        localStorage.removeItem(CHAVE_TOKEN);
+        localStorage.removeItem(CHAVE_USUARIO);
+        return null;
+    }
+    if (!resposta.ok) throw new Error('Não foi possível validar sua sessão. Tente novamente.');
+    const usuario = await resposta.json();
+    salvarSessao(sessao.token, usuario);
+    return usuario;
+}
+
+async function protegerRota(papelEsperado) {
+    const usuario = await validarSessao();
+    if (!usuario) {
+        encerrarSessao('login_necessario');
+        return null;
+    }
+    if (usuario.papel !== papelEsperado) {
+        window.location.href = usuario.papel === 'ALUNO' ? '/aluno' : '/parceiro';
+        return null;
+    }
+    for (const [id, texto] of [['user-nome', usuario.nome], ['user-email', usuario.email],
+        ['user-papel', usuario.papel], ['user-avatar', usuario.nome.charAt(0).toUpperCase()]]) {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.textContent = texto;
+    }
+    return usuario;
+}
+
+async function api(caminho, opcoes = {}) {
     const sessao = obterSessao();
     if (!sessao) {
-        window.location.href = '/?msg=login_necessario';
-        return;
+        encerrarSessao('login_necessario');
+        throw new Error('Faça login novamente.');
     }
-
-    const { usuario } = sessao;
-
-    // RN05: Garante que alunos não acessem visão do parceiro e vice-versa
-    if (papelEsperado && usuario.papel !== papelEsperado) {
-        if (usuario.papel === 'ALUNO') {
-            window.location.href = '/aluno';
-        } else if (usuario.papel === 'PARCEIRO') {
-            window.location.href = '/parceiro';
-        }
-        return;
+    const resposta = await fetch(caminho, { ...opcoes, headers: {
+        'Content-Type': 'application/json', Authorization: `Bearer ${sessao.token}`, ...opcoes.headers,
+    }});
+    if (resposta.status === 401) {
+        encerrarSessao('sessao_expirada');
+        throw new Error('Sessão expirada.');
     }
-
-    // Preenche informações visuais do usuário na página se existirem os elementos
-    const elNome = document.getElementById('user-nome');
-    const elEmail = document.getElementById('user-email');
-    const elPapel = document.getElementById('user-papel');
-    const elAvatar = document.getElementById('user-avatar');
-
-    if (elNome) elNome.textContent = usuario.nome;
-    if (elEmail) elEmail.textContent = usuario.email;
-    if (elPapel) elPapel.textContent = usuario.papel;
-    if (elAvatar && usuario.nome) {
-        elAvatar.textContent = usuario.nome.charAt(0).toUpperCase();
+    const dados = await resposta.json();
+    if (!resposta.ok) {
+        const mensagem = Array.isArray(dados.detail)
+            ? dados.detail.map(erro => erro.msg).join('; ') : dados.detail;
+        throw new Error(mensagem || 'Não foi possível concluir a operação.');
     }
+    return dados;
 }
 
-// Configura botão de logout se existir na página
+function escapar(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const moeda = valor => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const horario = valor => new Date(valor).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+function avisar(mensagem, sucesso = false) {
+    const alerta = document.getElementById('app-alert');
+    if (!alerta) return;
+    alerta.className = `alert show alert-${sucesso ? 'success' : 'danger'}`;
+    alerta.textContent = mensagem;
+}
+
+async function executarBotao(botao, operacao) {
+    botao.disabled = true;
+    try { await operacao(); } catch (erro) { avisar(erro.message); }
+    finally { botao.disabled = false; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    const btnLogout = document.getElementById('btn-logout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', (e) => {
-            e.preventDefault();
-            encerrarSessao();
-        });
-    }
+    document.getElementById('btn-logout')?.addEventListener('click', () => encerrarSessao());
 });

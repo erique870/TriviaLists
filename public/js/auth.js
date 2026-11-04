@@ -2,9 +2,13 @@
  * TRIVIALISTS - Lógica da Página de Autenticação (Login e Cadastro FA01)
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Se o usuário já tiver sessão ativa válida, redireciona direto para sua tela
-    const sessaoExistente = obterSessao();
+    let sessaoExistente = null;
+    try {
+        const usuario = await validarSessao();
+        if (usuario) sessaoExistente = { usuario };
+    } catch { /* A tela de acesso continua disponível para tentar novamente. */ }
     if (sessaoExistente && sessaoExistente.usuario) {
         if (sessaoExistente.usuario.papel === 'ALUNO') {
             window.location.href = '/aluno';
@@ -60,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('msg') === 'sessao_encerrada') {
         exibirAlerta('Sua sessão foi encerrada com sucesso.', 'success');
+    } else if (urlParams.get('msg') === 'sessao_expirada') {
+        exibirAlerta('Sua sessão expirou. Faça login novamente.', 'danger');
     } else if (urlParams.get('msg') === 'login_necessario') {
         exibirAlerta('Por favor, faça login para acessar esta página.', 'danger');
     }

@@ -14,6 +14,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_usuario_repo(request: Request) -> RepositorioUsuario:
     """Injeta a implementação do repositório de usuários configurado no app."""
+    if hasattr(request.app.state, "contexto"):
+        return request.app.state.contexto.usuarios
     if hasattr(request.app.state, "repositorio_usuario"):
         return request.app.state.repositorio_usuario
     if hasattr(request.app.state, "db"):
@@ -47,7 +49,7 @@ def get_current_user(
             detail="Sessão expirada. Faça login novamente.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except (TokenInvalidoError, ValueError):
+    except (TokenInvalidoError, ValueError, TypeError):
         raise credenciais_exception
 
     usuario = usuarios.obter_por_id(usuario_id)

@@ -12,6 +12,25 @@ jobs:
     name: Suíte de testes
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trivialists
+          POSTGRES_PASSWORD: trivialists
+          POSTGRES_DB: trivialists
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trivialists -d trivialists"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      DATABASE_URL: ""
+      TEST_DATABASE_URL: postgresql://trivialists:trivialists@localhost:5432/trivialists
+
     steps:
       - name: Baixar código
         uses: actions/checkout@v7

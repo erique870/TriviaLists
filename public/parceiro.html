@@ -35,12 +35,50 @@
                 </div>
             </div>
 
-            <!-- Área de Gestão de Cardápio (CU04 / CU05 / CU06) -->
-            <div class="status-placeholder-card">
-                <h2>Gerenciamento do Cardápio Diário</h2>
-                <p>Você está logado como estabelecimento parceiro. O vínculo com seu restaurante foi obtido de forma segura a partir da sua sessão (RN05). O painel de publicação de cardápio e emissão do relatório de produção já possui contexto do seu restaurante.</p>
-            </div>
-
+            <div id="app-alert" class="alert" role="status" aria-live="polite"></div>
+            <section class="panel" aria-labelledby="titulo-horarios">
+                <h2 id="titulo-horarios">Horários padrão</h2>
+                <p class="field-hint">Horários de Brasília. Alterações valem para as próximas listas.</p>
+                <form id="form-horarios" class="form-grid">
+                    <label>Abertura<input id="padrao-abertura" type="time" class="form-control" required></label>
+                    <label>Fechamento<input id="padrao-fechamento" type="time" class="form-control" required></label>
+                    <button class="btn btn-outline" type="submit">Salvar horários</button>
+                </form>
+            </section>
+            <section class="panel" aria-labelledby="titulo-produtos">
+                <h2 id="titulo-produtos">Cadastro de produtos</h2>
+                <form id="form-produto" class="form-grid">
+                    <input id="produto-id" type="hidden">
+                    <label>Nome<input id="produto-nome" class="form-control" maxlength="120" required></label>
+                    <label>Preço (R$)<input id="produto-preco" type="number" min="0" max="99999999.99" step="0.01" class="form-control" required></label>
+                    <label class="full-width">Descrição<input id="produto-descricao" class="form-control" maxlength="4000"></label>
+                    <label class="check-label"><input id="produto-disponivel" type="checkbox" checked> Disponível</label>
+                    <div class="actions"><button class="btn btn-outline" type="submit">Salvar produto</button><button id="limpar-produto" class="btn btn-outline" type="button">Novo produto</button></div>
+                </form>
+                <div id="produtos"><p>Carregando catálogo...</p></div>
+            </section>
+            <section class="panel" aria-labelledby="titulo-publicar">
+                <h2 id="titulo-publicar">Criar lista diária</h2>
+                <form id="form-lista" class="form-grid">
+                    <label>Data<input id="lista-data" type="date" class="form-control" required></label>
+                    <label>Abertura<input id="lista-abertura" type="time" class="form-control" required></label>
+                    <label>Fechamento<input id="lista-fechamento" type="time" class="form-control" required></label>
+                    <fieldset class="full-width"><legend>Produtos do cardápio</legend><div id="lista-produtos"></div></fieldset>
+                    <button class="btn btn-primary full-width" type="submit">Publicar cardápio e avisar alunos</button>
+                </form>
+            </section>
+            <section class="panel" aria-labelledby="titulo-listas">
+                <div class="section-heading"><h2 id="titulo-listas">Listas e produção</h2><button id="atualizar" class="btn btn-outline">Atualizar</button></div>
+                <div id="listas"><p>Carregando listas...</p></div>
+            </section>
+            <section id="painel-relatorio" class="panel" aria-labelledby="titulo-relatorio" hidden>
+                <div class="section-heading"><h2 id="titulo-relatorio">Relatório de produção</h2><button id="imprimir" class="btn btn-outline">Imprimir</button></div>
+                <div id="relatorio"></div>
+            </section>
+            <section id="painel-retiradas" class="panel" aria-labelledby="titulo-retiradas" hidden>
+                <div class="section-heading"><h2 id="titulo-retiradas">Pedidos e retiradas</h2><button id="atualizar-retiradas" class="btn btn-outline">Atualizar pedidos</button></div>
+                <div id="pedidos-retirada" aria-live="polite"></div>
+            </section>
         </div>
     </main>
 
@@ -49,11 +87,6 @@
     </footer>
 
     <script src="/static/js/session.js"></script>
-    <script>
-        // Protege a rota garantindo que apenas usuários logados com papel PARCEIRO acessem
-        document.addEventListener('DOMContentLoaded', () => {
-            protegerRota('PARCEIRO');
-        });
-    </script>
+    <script src="/static/js/parceiro.js"></script>
 </body>
 </html>

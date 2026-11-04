@@ -30,7 +30,7 @@ def _clean_db_url(url: str) -> str:
 class Settings:
     DATABASE_URL: str = _clean_db_url(os.getenv(
         "DATABASE_URL",
-        "postgresql://trivialists:trivialists@localhost:5432/trivialists",
+        "",
     ))
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
@@ -40,6 +40,10 @@ class Settings:
     )
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+    TIMEZONE: str = os.getenv("APP_TIMEZONE", "America/Sao_Paulo")
+    WORKER_INTERVAL_SECONDS: float = max(1, float(os.getenv("WORKER_INTERVAL_SECONDS", "30")))
+    NOTIFICATION_WEBHOOK_URL: str = os.getenv("NOTIFICATION_WEBHOOK_URL", "")
+    NOTIFICATION_WEBHOOK_TOKEN: str = os.getenv("NOTIFICATION_WEBHOOK_TOKEN", "")
 
 
 settings = Settings()
