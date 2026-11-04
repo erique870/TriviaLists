@@ -43,6 +43,45 @@ class RepositoriosPostgres:
             papel=PapelUsuario(row["papel"]), restaurante_id=row["restaurante_id"],
         )
 
+    def obter_usuario_por_email(self, email: str) -> Usuario | None:
+        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("SELECT * FROM usuarios WHERE LOWER(email) = LOWER(%s)", (email.strip(),))
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return Usuario(
+            id=row["id"], nome=row["nome"], email=row["email"],
+            senha_hash=row["senha_hash"], telefone=row["telefone"],
+            papel=PapelUsuario(row["papel"]), restaurante_id=row["restaurante_id"],
+        )
+
+    def salvar_usuario(self, usuario: Usuario) -> Usuario:
+        with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            if usuario.id is None or usuario.id == 0:
+                cur.execute(
+                    """INSERT INTO usuarios (nome, email, senha_hash, telefone, papel, restaurante_id)
+                       VALUES (%s, %s, %s, %s, %s, %s)
+                       RETURNING id""",
+                    (usuario.nome, usuario.email.strip().lower(), usuario.senha_hash,
+                     usuario.telefone, usuario.papel.value, usuario.restaurante_id),
+                )
+                novo_id = cur.fetchone()["id"]
+                conn.commit()
+                return Usuario(
+                    id=novo_id, nome=usuario.nome, email=usuario.email.strip().lower(),
+                    senha_hash=usuario.senha_hash, telefone=usuario.telefone,
+                    papel=usuario.papel, restaurante_id=usuario.restaurante_id,
+                )
+            else:
+                cur.execute(
+                    """UPDATE usuarios SET nome=%s, email=%s, senha_hash=%s,
+                       telefone=%s, papel=%s, restaurante_id=%s WHERE id=%s""",
+                    (usuario.nome, usuario.email.strip().lower(), usuario.senha_hash,
+                     usuario.telefone, usuario.papel.value, usuario.restaurante_id, usuario.id),
+                )
+                conn.commit()
+                return usuario
+
     def obter_restaurante(self, restaurante_id: int) -> Restaurante | None:
         with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM restaurantes WHERE id = %s", (restaurante_id,))
@@ -272,46 +311,78 @@ class RepositoriosPostgres:
 
 
 class RepositorioUsuarioPostgres:
-    def __init__(self, db: RepositoriosPostgres) -> None: self.db = db
+    def __init__(self, db: RepositoriosPostgres) -> None:
+        self.db = db
+
     def obter_por_id(self, usuario_id: int) -> Usuario | None:
         return self.db.obter_por_id(usuario_id)
 
+    def obter_por_email(self, email: str) -> Usuario | None:
+        return self.db.obter_usuario_por_email(email)
+
+    def salvar(self, usuario: Usuario) -> Usuario:
+        return self.db.salvar_usuario(usuario)
+
 
 class RepositorioRestaurantePostgres:
-    def __init__(self, db: RepositoriosPostgres) -> None: self.db = db
+    def __init__(self, db: RepositoriosPostgres) -> None:
+        self.db = db
+
     def obter_por_id(self, restaurante_id: int) -> Restaurante | None:
         return self.db.obter_restaurante(restaurante_id)
+
     def salvar(self, restaurante: Restaurante) -> None:
         self.db.salvar_restaurante(restaurante)
 
 
 class RepositorioProdutoPostgres:
-    def __init__(self, db: RepositoriosPostgres) -> None: self.db = db
-    def proximo_id(self) -> int: return self.db.proximo_id_produto()
+    def __init__(self, db: RepositoriosPostgres) -> None:
+        self.db = db
+
+    def proximo_id(self) -> int:
+        return self.db.proximo_id_produto()
+
     def obter_por_id(self, produto_id: int) -> Produto | None:
         return self.db.obter_produto(produto_id)
+
     def listar_por_restaurante(self, restaurante_id: int) -> list[Produto]:
         return self.db.listar_por_restaurante(restaurante_id)
-    def salvar(self, produto: Produto) -> None: self.db.salvar_produto(produto)
+
+    def salvar(self, produto: Produto) -> None:
+        self.db.salvar_produto(produto)
 
 
 class RepositorioListaDiariaPostgres:
-    def __init__(self, db: RepositoriosPostgres) -> None: self.db = db
-    def proximo_id(self) -> int: return self.db.proximo_id_lista()
+    def __init__(self, db: RepositoriosPostgres) -> None:
+        self.db = db
+
+    def proximo_id(self) -> int:
+        return self.db.proximo_id_lista()
+
     def obter_por_id(self, lista_id: int) -> ListaDiaria | None:
         return self.db.obter_lista(lista_id)
+
     def listar_abertas(
         self, data_hora: datetime, restaurante_id: int | None = None
     ) -> list[ListaDiaria]:
         return self.db.listar_listas_abertas(data_hora, restaurante_id)
-    def salvar(self, lista: ListaDiaria) -> None: self.db.salvar_lista(lista)
+
+    def salvar(self, lista: ListaDiaria) -> None:
+        self.db.salvar_lista(lista)
 
 
 class RepositorioPedidoPostgres:
-    def __init__(self, db: RepositoriosPostgres) -> None: self.db = db
-    def proximo_id(self) -> int: return self.db.proximo_id_pedido()
+    def __init__(self, db: RepositoriosPostgres) -> None:
+        self.db = db
+
+    def proximo_id(self) -> int:
+        return self.db.proximo_id_pedido()
+
     def obter_por_id(self, pedido_id: int) -> Pedido | None:
         return self.db.obter_pedido(pedido_id)
+
     def listar_por_usuario(self, usuario_id: int) -> list[Pedido]:
         return self.db.listar_pedidos_por_usuario(usuario_id)
-    def salvar(self, pedido: Pedido) -> None: self.db.salvar_pedido(pedido)
+
+    def salvar(self, pedido: Pedido) -> None:
+        self.db.salvar_pedido(pedido)

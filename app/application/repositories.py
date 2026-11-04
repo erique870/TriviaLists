@@ -12,6 +12,28 @@ class RepositorioUsuariosEmMemoria:
     def obter_por_id(self, usuario_id: int) -> Usuario | None:
         return self._usuarios.get(usuario_id)
 
+    def obter_por_email(self, email: str) -> Usuario | None:
+        email_clean = email.strip().lower()
+        for u in self._usuarios.values():
+            if u.email.strip().lower() == email_clean:
+                return u
+        return None
+
+    def salvar(self, usuario: Usuario) -> Usuario:
+        if usuario.id is None or usuario.id == 0:
+            novo_id = max(self._usuarios.keys(), default=0) + 1
+            usuario = Usuario(
+                id=novo_id,
+                nome=usuario.nome,
+                email=usuario.email.strip().lower(),
+                senha_hash=usuario.senha_hash,
+                telefone=usuario.telefone,
+                papel=usuario.papel,
+                restaurante_id=usuario.restaurante_id,
+            )
+        self._usuarios[usuario.id] = usuario
+        return usuario
+
 
 class RepositorioRestaurantesEmMemoria:
     def __init__(self, restaurantes: list[Restaurante] | None = None) -> None:

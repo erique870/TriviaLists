@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivialists - Área do Aluno</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/aluno" class="brand">
+            <div class="brand-icon">T</div>
+            <span class="brand-title">Trivialists</span>
+            <span class="brand-badge">Área do Aluno</span>
+        </a>
+        <button type="button" id="btn-logout" class="btn btn-danger-outline">Sair</button>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-container">
+            
+            <!-- Barra de Perfil do Aluno -->
+            <div class="user-profile-bar">
+                <div class="user-info">
+                    <div id="user-avatar" class="user-avatar">A</div>
+                    <div class="user-details">
+                        <h3 id="user-nome">Carregando...</h3>
+                        <p id="user-email">aluno@exemplo.com</p>
+                    </div>
+                </div>
+                <div>
+                    <span id="user-papel" class="role-badge aluno">ALUNO</span>
+                </div>
+            </div>
+
+            <!-- Área de Cardápios Abertos (CU01 / CU02) -->
+            <div class="status-placeholder-card">
+                <h2>Cardápios do Dia Disponíveis</h2>
+                <p>Você está autenticado com sucesso! Esta área já está conectada à sessão e pronta para exibir as listas abertas do Salsalito, Pilograma e Tapioca.</p>
+                <div style="margin-top: 24px;">
+                    <a href="/static/index.html" style="display: none;">Voltar</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        Trivialists &bull; Impatech &bull; Sessão Ativa
+    </footer>
+
+    <script src="/static/js/session.js"></script>
+    <script>
+        // Protege a rota garantindo que apenas usuários logados com papel ALUNO acessem
+        document.addEventListener('DOMContentLoaded', () => {
+            protegerRota('ALUNO');
+        });
+    </script>
+</body>
+</html>

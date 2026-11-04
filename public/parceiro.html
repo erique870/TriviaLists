@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivialists - Painel do Restaurante</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍳</text></svg>">
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/parceiro" class="brand">
+            <div class="brand-icon">T</div>
+            <span class="brand-title">Trivialists</span>
+            <span class="brand-badge" style="background: rgba(255, 152, 0, 0.25); color: #FFE082;">Painel Parceiro</span>
+        </a>
+        <button type="button" id="btn-logout" class="btn btn-danger-outline">Sair</button>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-container">
+            
+            <!-- Barra de Perfil do Parceiro (RN05) -->
+            <div class="user-profile-bar">
+                <div class="user-info">
+                    <div id="user-avatar" class="user-avatar" style="background: #FFF3E0; color: #E65100;">P</div>
+                    <div class="user-details">
+                        <h3 id="user-nome">Carregando parceiro...</h3>
+                        <p id="user-email">parceiro@restaurante.com</p>
+                    </div>
+                </div>
+                <div>
+                    <span id="user-papel" class="role-badge parceiro">PARCEIRO</span>
+                </div>
+            </div>
+
+            <!-- Área de Gestão de Cardápio (CU04 / CU05 / CU06) -->
+            <div class="status-placeholder-card">
+                <h2>Gerenciamento do Cardápio Diário</h2>
+                <p>Você está logado como estabelecimento parceiro. O vínculo com seu restaurante foi obtido de forma segura a partir da sua sessão (RN05). O painel de publicação de cardápio e emissão do relatório de produção já possui contexto do seu restaurante.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        Trivialists &bull; Painel Administrativo de Parceiro &bull; Impatech
+    </footer>
+
+    <script src="/static/js/session.js"></script>
+    <script>
+        // Protege a rota garantindo que apenas usuários logados com papel PARCEIRO acessem
+        document.addEventListener('DOMContentLoaded', () => {
+            protegerRota('PARCEIRO');
+        });
+    </script>
+</body>
+</html>

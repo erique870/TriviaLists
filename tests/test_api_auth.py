@@ -1,0 +1,194 @@
+from collections.abc import Generator
+from datetime import timedelta
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.application.repositories import RepositorioUsuariosEmMemoria
+from app.core.security import criar_token_acesso, gerar_hash_senha
+from app.domain.enums import PapelUsuario
+from app.domain.usuario import Usuario
+from app.main import app
+from app.routers.deps import get_usuario_repo, require_aluno, require_parceiro
+
+
+# Rotas simuladas para testar guards de autorização por papel (RN05)
+@app.get("/test/aluno-only")
+def rota_apenas_aluno(usuario: Usuario = pytest.importorskip("fastapi").Depends(require_aluno)):
+    return {"msg": f"Bem-vindo aluno {usuario.nome}"}
+
+
+@app.get("/test/parceiro-only")
+def rota_apenas_parceiro(usuario: Usuario = pytest.importorskip("fastapi").Depends(require_parceiro)):
+    return {"msg": f"Bem-vindo parceiro do restaurante {usuario.restaurante_id}"}
+
+
+@pytest.fixture
+def repo_memoria() -> RepositorioUsuariosEmMemoria:
+    usuario_aluno = Usuario(
+        id=1,
+        nome="Erique Aluno",
+        email="erique@impatech.edu.br",
+        senha_hash=gerar_hash_senha("SenhaAluno123"),
+        telefone="21999998888",
+        papel=PapelUsuario.ALUNO,
+        restaurante_id=None,
+    )
+    usuario_parceiro = Usuario(
+        id=2,
+        nome="Gerente Salsalito",
+        email="salsalito@teste.com",
+        senha_hash=gerar_hash_senha("SenhaParceiro123"),
+        telefone="21988887777",
+        papel=PapelUsuario.PARCEIRO,
+        restaurante_id=1,
+    )
+    return RepositorioUsuariosEmMemoria([usuario_aluno, usuario_parceiro])
+
+
+@pytest.fixture
+def client(repo_memoria: RepositorioUsuariosEmMemoria) -> Generator[TestClient, None, None]:
+    app.dependency_overrides[get_usuario_repo] = lambda: repo_memoria
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+def test_login_aluno_sucesso(client: TestClient):
+    payload = {
+        "email": "erique@impatech.edu.br",
+        "senha": "SenhaAluno123",
+    }
+    response = client.post("/auth/login", json=payload)
+    assert response.status_code == 200
+
+    dados = response.json()
+    assert "access_token" in dados
+    assert dados["token_type"] == "bearer"
+    assert dados["usuario"]["email"] == "erique@impatech.edu.br"
+    assert dados["usuario"]["papel"] == "ALUNO"
+    assert dados["usuario"]["restaurante_id"] is None
+
+
+def test_login_parceiro_sucesso(client: TestClient):
+    payload = {
+        "email": "salsalito@teste.com",
+        "senha": "SenhaParceiro123",
+    }
+    response = client.post("/auth/login", json=payload)
+    assert response.status_code == 200
+
+    dados = response.json()
+    assert dados["usuario"]["papel"] == "PARCEIRO"
+    assert dados["usuario"]["restaurante_id"] == 1
+
+
+def test_login_credenciais_incorretas(client: TestClient):
+    payload = {
+        "email": "erique@impatech.edu.br",
+        "senha": "SenhaTotalmenteErrada",
+    }
+    response = client.post("/auth/login", json=payload)
+    assert response.status_code == 401
+    assert "E-mail ou senha incorretos." in response.json()["detail"]
+
+
+def test_login_usuario_inexistente(client: TestClient):
+    payload = {
+        "email": "inexistente@impatech.edu.br",
+        "senha": "qualquer_senha",
+    }
+    response = client.post("/auth/login", json=payload)
+    assert response.status_code == 401
+    assert "E-mail ou senha incorretos." in response.json()["detail"]
+
+
+def test_cadastro_aluno_sucesso_fa01(client: TestClient):
+    payload = {
+        "nome": "Novo Aluno Impatech",
+        "email": "novato@impatech.edu.br",
+        "telefone": "21977776666",
+        "senha": "NovaSenhaSegura123",
+    }
+    response = client.post("/auth/cadastro", json=payload)
+    assert response.status_code == 201
+
+    dados = response.json()
+    assert "access_token" in dados
+    assert dados["usuario"]["nome"] == "Novo Aluno Impatech"
+    assert dados["usuario"]["email"] == "novato@impatech.edu.br"
+    assert dados["usuario"]["papel"] == "ALUNO"
+    assert dados["usuario"]["restaurante_id"] is None
+
+    # Tenta logar com a conta recém criada
+    login_res = client.post(
+        "/auth/login",
+        json={"email": "novato@impatech.edu.br", "senha": "NovaSenhaSegura123"},
+    )
+    assert login_res.status_code == 200
+
+
+def test_cadastro_aluno_email_duplicado_conflito(client: TestClient):
+    payload = {
+        "nome": "Tentativa Duplicada",
+        "email": "erique@impatech.edu.br",
+        "telefone": "21900001111",
+        "senha": "OutraSenha123",
+    }
+    response = client.post("/auth/cadastro", json=payload)
+    assert response.status_code == 409
+    assert "Já existe uma conta" in response.json()["detail"]
+
+
+def test_me_retorna_usuario_autenticado(client: TestClient):
+    token = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "ALUNO"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/auth/me", headers=headers)
+    assert response.status_code == 200
+
+    dados = response.json()
+    assert dados["id"] == 1
+    assert dados["email"] == "erique@impatech.edu.br"
+    assert dados["papel"] == "ALUNO"
+
+
+def test_me_sem_token_retorna_401(client: TestClient):
+    response = client.get("/auth/me")
+    assert response.status_code == 401
+
+
+def test_me_token_expirado_retorna_401(client: TestClient):
+    token_expirado = criar_token_acesso(
+        {"sub": "1", "email": "erique@impatech.edu.br"},
+        expira_em=timedelta(seconds=-10),
+    )
+    headers = {"Authorization": f"Bearer {token_expirado}"}
+    response = client.get("/auth/me", headers=headers)
+    assert response.status_code == 401
+    assert "Sessão expirada." in response.json()["detail"]
+
+
+def test_me_token_malformado_retorna_401(client: TestClient):
+    headers = {"Authorization": "Bearer token.completamente.errado"}
+    response = client.get("/auth/me", headers=headers)
+    assert response.status_code == 401
+    assert "Token de autenticação inválido" in response.json()["detail"]
+
+
+def test_endpoint_exclusivo_aluno_bloqueia_parceiro(client: TestClient):
+    token_parceiro = criar_token_acesso({"sub": "2", "email": "salsalito@teste.com", "papel": "PARCEIRO"})
+    headers = {"Authorization": f"Bearer {token_parceiro}"}
+
+    response = client.get("/test/aluno-only", headers=headers)
+    assert response.status_code == 403
+    assert "apenas para alunos" in response.json()["detail"]
+
+
+def test_endpoint_exclusivo_parceiro_bloqueia_aluno(client: TestClient):
+    token_aluno = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "ALUNO"})
+    headers = {"Authorization": f"Bearer {token_aluno}"}
+
+    response = client.get("/test/parceiro-only", headers=headers)
+    assert response.status_code == 403
+    assert "apenas para parceiros comerciais" in response.json()["detail"]
