@@ -206,8 +206,8 @@ def test_erro_de_validacao_devolve_detail_em_texto(client: TestClient):
         f"detail veio como {type(detalhe).__name__}; o frontend o escreve direto na "
         f"tela e uma lista virar texto produz '[object Object]'."
     )
-    assert "email" in detalhe and "telefone" in detalhe
     assert "e-mail inválido" in detalhe
+    assert "Telefone precisa de ao menos 8 caracteres" in detalhe
 
 
 def test_erro_de_validacao_no_login_tambem_e_texto(client: TestClient):
@@ -215,3 +215,31 @@ def test_erro_de_validacao_no_login_tambem_e_texto(client: TestClient):
 
     assert resposta.status_code == 422
     assert isinstance(resposta.json()["detail"], str)
+
+
+def test_mensagens_de_validacao_saem_em_portugues(client: TestClient):
+    resposta = client.post("/auth/cadastro", json={
+        "nome": "A", "email": "a@b", "telefone": "1", "senha": "123",
+    })
+
+    assert resposta.status_code == 422
+    assert resposta.json()["detail"] == (
+        "Nome precisa de ao menos 2 caracteres; "
+        "Formato de e-mail inválido; "
+        "Telefone precisa de ao menos 8 caracteres; "
+        "Senha precisa de ao menos 6 caracteres"
+    )
+
+
+def test_campo_ausente_e_campo_proibido_tem_mensagem_propria(client: TestClient):
+    vazio = client.post("/auth/cadastro", json={})
+    assert vazio.json()["detail"] == (
+        "Nome é obrigatório; E-mail é obrigatório; "
+        "Telefone é obrigatório; Senha é obrigatório"
+    )
+
+    extra = client.post("/auth/cadastro", json={
+        "nome": "Carlos Silva", "email": "carlos@impatech.edu.br",
+        "telefone": "21999998888", "senha": "senha123", "papel": "PARCEIRO",
+    })
+    assert extra.json()["detail"] == "Papel não é aceito neste formulário"

@@ -16,6 +16,7 @@ from app.application.notificacao_service import ServicoNotificacao
 from app.application.restaurante_service import ServicoRestaurante
 from app.core.clock import agora
 from app.core.config import settings
+from app.core.erros import mensagem_de_validacao
 from app.domain import ErroDominio
 from app.infrastructure.contexto import contexto_memoria, contexto_postgres
 from app.infrastructure.postgres import RepositoriosPostgres
@@ -94,11 +95,10 @@ def create_app(contexto=None, executar_tarefas=True):
     @app.exception_handler(RequestValidationError)
     async def dados_invalidos(request: Request, erro: RequestValidationError):
         """Uniformiza o 422 do FastAPI: `detail` em texto, como nos demais handlers."""
-        partes = []
-        for item in erro.errors():
-            campo = ".".join(str(parte) for parte in item["loc"][1:]) or "corpo"
-            partes.append(f"{campo}: {item['msg']}")
-        return JSONResponse(status_code=422, content={"detail": "; ".join(partes)})
+        return JSONResponse(
+            status_code=422,
+            content={"detail": mensagem_de_validacao(erro.errors())},
+        )
 
     @app.exception_handler(UniqueViolation)
     async def conflito(request: Request, erro):
