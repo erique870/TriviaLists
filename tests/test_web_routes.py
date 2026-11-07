@@ -24,10 +24,10 @@ def test_pagina_login_rota_alternativa(client: TestClient):
     assert "Trivialists" in response.text
 
 
-def test_pagina_aluno_html(client: TestClient):
-    response = client.get("/aluno")
+def test_pagina_cliente_html(client: TestClient):
+    response = client.get("/cliente")
     assert response.status_code == 200
-    assert "Área do Aluno" in response.text
+    assert "Área do Cliente" in response.text
     assert "btn-logout" in response.text
 
 

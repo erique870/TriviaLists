@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const retirados = pedidos.filter(p => p.concluido).length;
         document.getElementById('pedidos-retirada').innerHTML = pedidos.length
             ? `<p>${pendentes} retirada(s) pendente(s) · ${retirados} pedido(s) concluído(s)</p>` + pedidos.map(p => `<article class="entry" data-pedido="${p.id}">
-                <div class="section-heading"><h3>Pedido #${p.id} · ${escapar(p.aluno)}</h3><span class="badge">${p.concluido ? 'CONCLUÍDO' : escapar(p.status)}</span></div>
+                <div class="section-heading"><h3>Pedido #${p.id} · ${escapar(p.cliente)}</h3><span class="badge">${p.concluido ? 'CONCLUÍDO' : escapar(p.status)}</span></div>
                 <p>${p.itens.map(i => `${i.quantidade} × ${escapar(i.produto)} (${moeda(i.preco_unitario)})`).join('<br>')}</p>
                 <p>Total: <strong>${moeda(p.valor_total)}</strong>${p.status === 'ATIVO' ? ` · Retirada: ${escapar(p.status_retirada)}` : ''}</p>
                 ${p.status === 'ATIVO' && !p.concluido ? `<button class="btn btn-outline" data-confirmar-retirada="${p.id}" data-lista="${lista}">Confirmar retirada</button>` : ''}

@@ -22,11 +22,11 @@ Abra `http://localhost:8000`. As contas de demonstração usam a senha `demo1234
 | Parceiro Salsalito | salsalito@exemplo.com |
 | Parceiro Pilograma | pilograma@exemplo.com |
 | Parceiro Tapioca | tapioca@exemplo.com |
-| Aluno | aluno@impatech.edu.br |
+| Cliente | cliente@impatech.edu.br |
 
-O parceiro cadastra produtos, seleciona-os e publica a lista. Em outra sessão/navegador, o aluno consulta o cardápio, informa quantidades e confirma ou cancela o pedido. O parceiro fecha a lista e recebe o relatório, que também pode ser impresso. Há configuração dos horários padrão e horários específicos por lista.
+O parceiro cadastra produtos, seleciona-os e publica a lista. Em outra sessão/navegador, o cliente consulta o cardápio, informa quantidades e confirma ou cancela o pedido. O parceiro fecha a lista e recebe o relatório, que também pode ser impresso. Há configuração dos horários padrão e horários específicos por lista.
 
-Para concluir a entrega, o parceiro clica em **Pedidos e retiradas** na lista desejada e, ao entregar a refeição ao aluno identificado, usa **Confirmar retirada** no pedido. A retirada passa de `PENDENTE` para `RETIRADO`, e o pedido aparece como **CONCLUÍDO** para o parceiro e para o aluno. A confirmação é permitida somente ao restaurante responsável, não depende de a lista estar aberta ou fechada e não aceita pedidos cancelados. Repetir a confirmação não duplica a operação. Um pedido retirado não pode ser cancelado nem permite outro pedido ativo na mesma lista; seus itens, valores e participação no relatório de produção são preservados. O aluno acompanha a atualização em **Meus pedidos**, pelo botão Atualizar ou pela consulta automática a cada 30 segundos.
+Para concluir a entrega, o parceiro clica em **Pedidos e retiradas** na lista desejada e, ao entregar a refeição ao cliente identificado, usa **Confirmar retirada** no pedido. A retirada passa de `PENDENTE` para `RETIRADO`, e o pedido aparece como **CONCLUÍDO** para o parceiro e para o cliente. A confirmação é permitida somente ao restaurante responsável, não depende de a lista estar aberta ou fechada e não aceita pedidos cancelados. Repetir a confirmação não duplica a operação. Um pedido retirado não pode ser cancelado nem permite outro pedido ativo na mesma lista; seus itens, valores e participação no relatório de produção são preservados. O cliente acompanha a atualização em **Meus pedidos**, pelo botão Atualizar ou pela consulta automática a cada 30 segundos.
 
 Em **Cadastro de produtos**, o botão **Excluir** remove definitivamente um produto após confirmação, desde que ele ainda não tenha sido vinculado a nenhuma lista ou pedido. Produtos já usados, inclusive em listas fechadas e pedidos cancelados, devem ser **desativados** para preservar o histórico. Cada parceiro só pode excluir produtos do próprio restaurante.
 
@@ -36,10 +36,13 @@ O modo em memória é descartável: os dados são perdidos ao reiniciar. `APP_DE
 
 Copie `.env.example` para `.env`, configure `DATABASE_URL` com a URI PostgreSQL e escolha um `JWT_SECRET_KEY` próprio. No Supabase, use a conexão PostgreSQL do projeto/pooler, com TLS (`sslmode=require`), em vez da URL da API REST. Senhas com caracteres especiais devem estar codificadas na URI.
 
-Execute `database/schema.sql` no banco. **Em bancos existentes, execute novamente o schema atualizado** para criar as tabelas de eventos/notificações e o índice de e-mail normalizado. A inicialização não aplica migrações automaticamente. `database/seed.sql` é opcional e contém contas de teste; novos parceiros devem ser vinculados ao restaurante diretamente no banco, conforme o escopo do projeto. O seed documenta suas próprias credenciais.
+Execute `database/schema.sql` no banco. **Em bancos existentes, execute novamente o schema atualizado** para criar as tabelas de eventos/notificações e o índice de e-mail normalizado. A inicialização não aplica migrações automaticamente.
+
+**Bancos criados antes da padronização de terminologia** guardam o papel como `ALUNO` e precisam de `database/migration_001_papel_cliente.sql`, que converte os registros para `CLIENTE` e recria os CHECKs correspondentes. Execute-a **antes** de subir esta versão da aplicação: o domínio passa a emitir `CLIENTE` e o CHECK antigo rejeitaria o valor. A migração é idempotente. Bancos criados a partir do `schema.sql` atual já nascem corretos e não precisam dela. `database/seed.sql` é opcional e contém contas de teste; novos parceiros devem ser vinculados ao restaurante diretamente no banco, conforme o escopo do projeto. O seed documenta suas próprias credenciais.
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migration_001_papel_cliente.sql  # so em bancos pre-existentes
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -64,7 +67,7 @@ O servidor usa `APP_TIMEZONE` (padrão `America/Sao_Paulo`). Pedidos e cancelame
 
 Uma rotina executada a cada `WORKER_INTERVAL_SECONDS` (30 segundos por padrão) fecha listas vencidas e consolida a produção. A validação do prazo ocorre em cada operação, independentemente dessa rotina. Transações e bloqueios por lista coordenam pedidos, cancelamentos e fechamentos concorrentes; o índice único parcial do banco também protege a RN03.
 
-A publicação grava um evento na mesma transação da lista. Em segundo plano, os avisos são distribuídos à caixa de notificações dos alunos cadastrados; a tela consulta atualizações a cada 30 segundos. A fila no PostgreSQL sobrevive a reinicializações.
+A publicação grava um evento na mesma transação da lista. Em segundo plano, os avisos são distribuídos à caixa de notificações dos clientes cadastrados; a tela consulta atualizações a cada 30 segundos. A fila no PostgreSQL sobrevive a reinicializações.
 
 Para integrar um serviço externo de push, configure `NOTIFICATION_WEBHOOK_URL` e, opcionalmente, `NOTIFICATION_WEBHOOK_TOKEN`. O servidor envia um POST JSON com `evento_id`, `tipo=cardapio_publicado`, `lista_id`, `restaurante_id`, `restaurante`, `data` e `url`. O destino deve administrar seus inscritos e entregar o push. Há cabeçalho `Idempotency-Key: cardapio-<evento_id>` e repetição com espera progressiva em caso de falha; o destinatário deve deduplicar os eventos. Sem essa configuração, os avisos permanecem disponíveis dentro da aplicação, sem push fora dela.
 
@@ -83,7 +86,7 @@ As rotas abaixo exigem `Authorization: Bearer <token>`. O usuário e o restauran
 | CU07 | `GET/POST /api/parceiro/produtos`, `PATCH/DELETE /api/parceiro/produtos/{id}` |
 | CU08 | `POST /auth/login`, `POST /auth/cadastro`, `GET /auth/me` |
 
-O parceiro também consulta `/api/parceiro/restaurante`, altera os horários em `PATCH /api/parceiro/restaurante/horarios` e consulta seu histórico em `GET /api/parceiro/listas`. O aluno marca avisos como lidos em `POST /api/notificacoes/{id}/ler`.
+O parceiro também consulta `/api/parceiro/restaurante`, altera os horários em `PATCH /api/parceiro/restaurante/horarios` e consulta seu histórico em `GET /api/parceiro/listas`. O cliente marca avisos como lidos em `POST /api/notificacoes/{id}/ler`.
 
 A consulta das entregas usa `GET /api/parceiro/listas/{lista_id}/pedidos` e a conclusão usa `POST /api/parceiro/listas/{lista_id}/pedidos/{pedido_id}/retirada`. As duas rotas exigem sessão de parceiro vinculado ao restaurante da lista. `CONCLUÍDO` é a apresentação do pedido `ATIVO` com retirada `RETIRADO`; o modelo existente e os relatórios continuam contabilizando esse pedido normalmente. Não é necessária uma nova migração de banco para esta função.
 
@@ -96,7 +99,7 @@ TEST_DATABASE_URL='postgresql://usuario:senha@localhost:5432/banco_teste' DATABA
 
 Sem `TEST_DATABASE_URL`, os cenários PostgreSQL são ignorados. Com ela, os testes criam schemas isolados `teste_<uuid>` e os removem ao terminar; a conta de teste precisa ter permissão para criar schemas. Os fluxos de aceitação são exercitados com os mesmos testes nos adaptadores de memória e PostgreSQL. A CI usa PostgreSQL real.
 
-O teste opcional das telas usa Playwright, duas sessões independentes e uma tela de aluno com largura de celular:
+O teste opcional das telas usa Playwright, duas sessões independentes e uma tela de cliente com largura de celular:
 
 ```bash
 pip install -e '.[dev,browser]'
@@ -139,13 +142,15 @@ Fora do Escopo:
 
 ## Atores/stakeholders
 
-**Cliente (Aluno/Servidor Impatech)**: Realiza pedidos, escolhe variações de pratos e visualiza status.
+**Cliente (aluno ou servidor da Impatech)**: Realiza pedidos, escolhe variações de pratos e visualiza status.
 
 **Parceiro (Comerciante Local - Salsalito, Pilograma, Tapioca)**: Cadastra/atualiza o cardápio diário, define horários de corte e acessa o relatório de pedidos consolidados.
 
 **Administrador do Sistema**: Responsável pela manutenção da plataforma e pelo cadastro dos estabelecimentos parceiros. É um *stakeholder* do projeto, mas não interage com o sistema por meio de interface própria nesta versão, motivo pelo qual não figura como ator no diagrama de casos de uso.
 
 ## Glossário
+
+**Cliente**: Ator que realiza pedidos — aluno ou servidor da Impatech. O termo *Cliente* é adotado de forma uniforme em todos os artefatos (este relatório, o código, o banco de dados e a interface), e o papel correspondente é gravado como `CLIENTE` na coluna `papel` da tabela `usuarios`. Onde o texto menciona *aluno* em sentido institucional — a pessoa matriculada na Impatech — o termo é mantido, por não designar o papel no sistema. Nos trechos de arquitetura, *cliente-servidor* e *dispositivo cliente* referem-se ao software que consome a API, não a este ator.
 
 **Quentinha**: Refeição pronta servida em embalagem individual descartável.
 
@@ -218,12 +223,12 @@ Fora do Escopo:
 **Métrica/Critério**: Disponibilidade de 99.5%durante o horário comercial.\
 \
 **RNF04**: Segurança/LGPD.\
-**Descrição**: Os dados pessoais dos alunos devem ser armazenados com proteção e privacidade.\
+**Descrição**: Os dados pessoais dos clientes devem ser armazenados com proteção e privacidade.\
 **Métrica/Critério**: Tráfego integralmente sob TLS (HTTPS); senhas armazenadas como *hash* com sal, por meio de algoritmo próprio para esse fim (bcrypt ou Argon2), de modo que não sejam recuperáveis nem pela equipe de desenvolvimento.
 
 ## Histórias de Usuário (Exemplos Principais)
 
-**HU01**: Como aluno da Impatech, quero fazer meu pedido de quentinha individualmente pelo aplicativo, para que meu nome não seja apagado por erros de cópia no WhatsApp.\
+**HU01**: Como cliente do sistema (aluno da Impatech), quero fazer meu pedido de quentinha individualmente pelo aplicativo, para que meu nome não seja apagado por erros de cópia no WhatsApp.\
 **Critérios de Aceite**: O sistema deve registrar o nome e item de forma isolada; deve emitir um comprovante visual com o ID do pedido.\
 \
 **HU02**: Como dono do Salsalito, quero postar o cardápio do dia e definir o horário limite de pedidos, para que eu consiga organizar a produção na cozinha com antecedência.\
@@ -231,9 +236,9 @@ Fora do Escopo:
 
 ## Priorização e Núcleo do Produto
 
-O núcleo mínimo capaz de entregar valor é o conjunto que substitui integralmente o fluxo hoje realizado por mensagens no WhatsApp: o parceiro publica o cardápio do dia, o aluno registra o pedido em seu próprio nome dentro do prazo, e o parceiro recebe a lista consolidada para a cozinha. Esse núcleo corresponde aos requisitos de prioridade Alta **RF01, RF02, RF03, RF04, RF05 e RF08** sustentados pelas regras **RN01, RN03, RN04 e RN05**.
+O núcleo mínimo capaz de entregar valor é o conjunto que substitui integralmente o fluxo hoje realizado por mensagens no WhatsApp: o parceiro publica o cardápio do dia, o cliente registra o pedido em seu próprio nome dentro do prazo, e o parceiro recebe a lista consolidada para a cozinha. Esse núcleo corresponde aos requisitos de prioridade Alta **RF01, RF02, RF03, RF04, RF05 e RF08** sustentados pelas regras **RN01, RN03, RN04 e RN05**.
 
-Os demais itens são incrementos sobre um produto já utilizável. O **RF06** (notificação) melhora a experiência, mas na ausência dele o aluno ainda consegue abrir o aplicativo e verificar se a lista foi publicada. O **RF07** (configuração do horário limite pelo parceiro) pode ser substituído no primeiro ciclo por um horário fixo definido em cadastro, e a **RN02** só passa a ser necessária quando o parceiro de cardápio variável ganha autonomia para publicar fora do horário padrão.
+Os demais itens são incrementos sobre um produto já utilizável. O **RF06** (notificação) melhora a experiência, mas na ausência dele o cliente ainda consegue abrir o aplicativo e verificar se a lista foi publicada. O **RF07** (configuração do horário limite pelo parceiro) pode ser substituído no primeiro ciclo por um horário fixo definido em cadastro, e a **RN02** só passa a ser necessária quando o parceiro de cardápio variável ganha autonomia para publicar fora do horário padrão.
 
 ## Matriz de Rastreabilidade
 
@@ -422,11 +427,11 @@ A Figura [fig:casosdeuso](#fig%3Acasosdeuso) apresenta o diagrama de casos de u
 1. O usuário informa e-mail institucional e senha na tela de acesso.
 2. O sistema localiza o registro de Usuario correspondente ao e-mail informado.
 3. O sistema compara a senha informada com o *hash* armazenado.
-4. Confirmada a correspondência, o sistema emite o token de sessão e direciona o usuário à interface correspondente ao seu papel (ALUNO ou PARCEIRO).
+4. Confirmada a correspondência, o sistema emite o token de sessão e direciona o usuário à interface correspondente ao seu papel (CLIENTE ou PARCEIRO).
 
 **Fluxos Alternativos**:
 
-1. **FA01 (Cadastro de Novo Cliente)**: Não havendo cadastro prévio, o usuário informa nome, e-mail institucional, telefone e senha, e o sistema cria o registro com papel ALUNO.
+1. **FA01 (Cadastro de Novo Cliente)**: Não havendo cadastro prévio, o usuário informa nome, e-mail institucional, telefone e senha, e o sistema cria o registro com papel CLIENTE.
 
 **Fluxos de Exceção**:
 
@@ -523,11 +528,11 @@ Optou-se por não utilizar arquiteturas distribuídas complexas (como microsserv
 
 A divisão de responsabilidades foi modularizada em componentes bem delimitados:
 
-- **Módulo de Apresentação do Cliente (Aluno)**: Interface minimalista projetada para telas de celulares. Permite visualização dos cardápios fixos e variáveis, seleção de variações com poucos toques e consulta/cancelamento do pedido do dia se dentro do tempo.
+- **Módulo de Apresentação do Cliente**: Interface minimalista projetada para telas de celulares. Permite visualização dos cardápios fixos e variáveis, seleção de variações com poucos toques e consulta/cancelamento do pedido do dia se dentro do tempo.
 - **Módulo de Apresentação do Parceiro (Restaurante)**: Painel de controle administrativo simplificado para postagem ágil do cardápio matinal, configuração de horários de corte e visualização/impressão da lista consolidada de produção para a cozinha.
 - **API REST (FastAPI)**: Ponto de entrada único das requisições HTTP. Responde pelas rotas sob `/api`, encaminha cada chamada ao componente responsável e traduz o resultado em códigos de resposta HTTP. Não contém regra de negócio.
-- **Controlador de Autenticação e Sessão**: Gerencia tokens de acesso seguros, validando se o usuário possui permissão de aluno ou de parceiro comercial. É também onde se aplica a RN05: o identificador do restaurante administrado por um parceiro é extraído da sessão, nunca da requisição.
-- **Módulo de Regras de Negócio e Pedidos**: Na parte do servidor, processa as solicitações e valida se o pedido do aluno respeita as regras de negócio, como a regra de pedido único ativo por restaurante (RN03) e assegura que a submissão ocorreu antes do horário de corte estabelecido (RN01 e RN02). É também o responsável pela consolidação do relatório de produção (RF05). Nenhuma regra de negócio é verificada fora deste componente.
+- **Controlador de Autenticação e Sessão**: Gerencia tokens de acesso seguros, validando se o usuário possui permissão de cliente ou de parceiro comercial. É também onde se aplica a RN05: o identificador do restaurante administrado por um parceiro é extraído da sessão, nunca da requisição.
+- **Módulo de Regras de Negócio e Pedidos**: Na parte do servidor, processa as solicitações e valida se o pedido do cliente respeita as regras de negócio, como a regra de pedido único ativo por restaurante (RN03) e assegura que a submissão ocorreu antes do horário de corte estabelecido (RN01 e RN02). É também o responsável pela consolidação do relatório de produção (RF05). Nenhuma regra de negócio é verificada fora deste componente.
 - **Serviço de Notificação**: Responsável pelo RF06. Identifica os clientes inscritos em um restaurante e despacha as notificações de publicação de cardápio de forma assíncrona, por meio de um serviço externo de *push*, sem bloquear a resposta ao parceiro.
 - **Camada de Acesso a Dados**: Concentra as consultas e gravações no banco relacional e o gerenciamento do *pool* de conexões. Isolá-la em um único módulo permite controlar o número de conexões simultâneas abertas pelo servidor nos horários de pico (RNF03).
 
@@ -537,7 +542,7 @@ A comunicação entre a camada de apresentação (*Frontend*) e a camada de serv
 
 O fluxo principal opera de maneira transacional e síncrona:
 
-1. O aluno submete o pedido via requisição HTTP (`POST /api/pedidos`), acompanhada do token de sessão.
+1. O cliente submete o pedido via requisição HTTP (`POST /api/pedidos`), acompanhada do token de sessão.
 2. O Controlador de Autenticação valida o token e identifica o usuário. Token ausente, inválido ou vencido resulta em `401 Unauthorized`.
 3. O Módulo de Regras de Negócio compara o horário da requisição com o horário de corte cadastrado para o parceiro. Caso o horário tenha expirado, a API rejeita a operação com código `403 Forbidden`.
 4. Estando no prazo, o pedido é gravado no banco de dados e retorna confirmação ao cliente com código `201 Created`.
@@ -567,7 +572,7 @@ As tecnologias foram escolhidas visando extrema leveza, execução nativa sem de
 
 O modelo relacional deriva diretamente do diagrama de classes da Figura [fig:classes](#fig%3Aclasses). São mantidas as seguintes tabelas:
 
-- **Usuario**: identificador, nome, e-mail institucional, telefone, senha armazenada como *hash* com sal e papel de acesso (**ALUNO** ou **PARCEIRO**). Usuários de papel PARCEIRO referenciam o restaurante que administram.
+- **Usuario**: identificador, nome, e-mail institucional, telefone, senha armazenada como *hash* com sal e papel de acesso (**CLIENTE** ou **PARCEIRO**). Usuários de papel PARCEIRO referenciam o restaurante que administram.
 - **Restaurante**: identificador, nome fantasia (Salsalito, Pilograma, Tapioca), endereço, horário padrão de abertura, horário padrão de fechamento, tipo de cardápio (**FIXO** ou **VARIAVEL**) e status ativo. O tipo de cardápio é o atributo que permite ao sistema decidir se a RN02 se aplica ao estabelecimento. Restaurantes não são excluídos da base; a desativação é feita pelo campo de status, o que preserva o histórico de listas e pedidos.
 - **Produto**: identificador, referência ao restaurante, nome, descrição, preço e disponibilidade. Constitui o catálogo permanente do estabelecimento.
 - **ListaDiaria**: identificador, referência ao restaurante, data da refeição, horário de abertura, horarioFechamento efetivo do dia e status (**ABERTA** ou **FECHADA**). O horário armazenado aqui já incorpora eventual extensão decorrente da RN02.

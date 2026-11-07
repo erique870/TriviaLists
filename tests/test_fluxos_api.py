@@ -31,7 +31,7 @@ def preparar(ctx):
         ctx.restaurantes.salvar(Restaurante(rid, f"Restaurante {rid}", "Campus", time(8), time(11),
                                            TipoCardapio.VARIAVEL if rid == 1 else TipoCardapio.FIXO))
     for uid, papel, rid in [(1, PapelUsuario.PARCEIRO, 1), (2, PapelUsuario.PARCEIRO, 2),
-                             (3, PapelUsuario.ALUNO, None), (4, PapelUsuario.ALUNO, None)]:
+                             (3, PapelUsuario.CLIENTE, None), (4, PapelUsuario.CLIENTE, None)]:
         ctx.usuarios.salvar(Usuario(uid, f"Usuário {uid}", f"u{uid}@exemplo.com", senha, "21999999999", papel, rid))
 
 
@@ -96,7 +96,7 @@ def test_fluxo_completo_publicar_pedir_cancelar_refazer_fechar_e_relatorio(ambie
     produto, lista = publicar(client, h)
     assert client.get("/api/listas", headers=h[3]).json()["listas"][0]["id"] == lista["id"]
     assert client.get("/api/listas?restaurante_id=2", headers=h[3]).json()["listas"] == []
-    # RF06: publicação chega aos alunos, com marcação de leitura isolada por usuário.
+    # RF06: publicação chega aos clientes, com marcação de leitura isolada por usuário.
     avisos = client.get("/api/notificacoes", headers=h[3]).json()
     assert len(avisos) == 1 and not avisos[0]["lida"]
     assert client.post(f"/api/notificacoes/{avisos[0]['id']}/ler", headers=h[4]).status_code == 404
@@ -386,7 +386,7 @@ def test_parceiro_conclui_retirada_e_preserva_pedido_e_relatorio(ambiente, lista
     caminho = f"/api/parceiro/listas/{lista['id']}/pedidos"
     antes = client.get(caminho, headers=h[1])
     assert antes.status_code == 200
-    assert antes.json()[0]["aluno"] == "Usuário 3"
+    assert antes.json()[0]["cliente"] == "Usuário 3"
     assert not antes.json()[0]["concluido"]
     assert "senha_hash" not in antes.text and "email" not in antes.text
     resposta = client.post(f"{caminho}/{pedido['id']}/retirada", headers=h[1])

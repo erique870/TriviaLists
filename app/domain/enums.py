@@ -2,7 +2,7 @@ from enum import StrEnum
 
 
 class PapelUsuario(StrEnum):
-    ALUNO = "ALUNO"
+    CLIENTE = "CLIENTE"
     PARCEIRO = "PARCEIRO"
 
 

@@ -43,9 +43,9 @@ def contexto():
     )
     parceiro = Usuario(1, "Parceiro", "p@exemplo.com", "hash", "119", PapelUsuario.PARCEIRO, 10)
     outro_parceiro = Usuario(2, "Outro", "o@exemplo.com", "hash", "118", PapelUsuario.PARCEIRO, 20)
-    aluno = Usuario(3, "Aluno", "a@exemplo.com", "hash", "117", PapelUsuario.ALUNO)
+    cliente = Usuario(3, "Cliente", "a@exemplo.com", "hash", "117", PapelUsuario.CLIENTE)
     return ServicoRestaurante(
-        RepositorioUsuariosEmMemoria([parceiro, outro_parceiro, aluno]),
+        RepositorioUsuariosEmMemoria([parceiro, outro_parceiro, cliente]),
         RepositorioRestaurantesEmMemoria([restaurante, outro_restaurante]),
         RepositorioProdutosEmMemoria(),
         RepositorioListasEmMemoria(),

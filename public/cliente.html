@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trivialists - Área do Aluno</title>
+    <title>Trivialists - Área do Cliente</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
 </head>
 <body>
 
     <header class="app-header">
-        <a href="/aluno" class="brand">
+        <a href="/cliente" class="brand">
             <div class="brand-icon">T</div>
             <span class="brand-title">Trivialists</span>
-            <span class="brand-badge">Área do Aluno</span>
+            <span class="brand-badge">Área do Cliente</span>
         </a>
         <button type="button" id="btn-logout" class="btn btn-danger-outline">Sair</button>
     </header>
@@ -21,17 +21,17 @@
     <main class="main-content">
         <div class="dashboard-container">
             
-            <!-- Barra de Perfil do Aluno -->
+            <!-- Barra de Perfil do Cliente -->
             <div class="user-profile-bar">
                 <div class="user-info">
                     <div id="user-avatar" class="user-avatar">A</div>
                     <div class="user-details">
                         <h3 id="user-nome">Carregando...</h3>
-                        <p id="user-email">aluno@exemplo.com</p>
+                        <p id="user-email">cliente@exemplo.com</p>
                     </div>
                 </div>
                 <div>
-                    <span id="user-papel" class="role-badge aluno">ALUNO</span>
+                    <span id="user-papel" class="role-badge cliente">CLIENTE</span>
                 </div>
             </div>
 
@@ -58,6 +58,6 @@
     </footer>
 
     <script src="/static/js/session.js"></script>
-    <script src="/static/js/aluno.js"></script>
+    <script src="/static/js/cliente.js"></script>
 </body>
 </html>

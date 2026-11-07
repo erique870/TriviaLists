@@ -47,7 +47,7 @@ async function protegerRota(papelEsperado) {
         return null;
     }
     if (usuario.papel !== papelEsperado) {
-        window.location.href = usuario.papel === 'ALUNO' ? '/aluno' : '/parceiro';
+        window.location.href = usuario.papel === 'CLIENTE' ? '/cliente' : '/parceiro';
         return null;
     }
     for (const [id, texto] of [['user-nome', usuario.nome], ['user-email', usuario.email],

@@ -13,4 +13,4 @@ def carregar_demo(ctx):
                                   (3, "Barraquinha de Tapioca", "tapioca", TipoCardapio.FIXO)]:
         ctx.restaurantes.salvar(Restaurante(rid, nome, "Campus Impatech", time(8), time(11), tipo))
         ctx.usuarios.salvar(Usuario(rid, nome, f"{slug}@exemplo.com", senha_hash, "21999999999", PapelUsuario.PARCEIRO, rid))
-    ctx.usuarios.salvar(Usuario(4, "Aluno de demonstração", "aluno@impatech.edu.br", senha_hash, "21999999999", PapelUsuario.ALUNO))
+    ctx.usuarios.salvar(Usuario(4, "Cliente de demonstração", "cliente@impatech.edu.br", senha_hash, "21999999999", PapelUsuario.CLIENTE))

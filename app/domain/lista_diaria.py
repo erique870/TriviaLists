@@ -76,8 +76,8 @@ class ListaDiaria:
         data_hora: datetime,
         pedido_id: int,
     ) -> Pedido:
-        if usuario.papel != PapelUsuario.ALUNO:
-            raise AcessoNegadoError("Somente alunos podem criar pedidos.")
+        if usuario.papel != PapelUsuario.CLIENTE:
+            raise AcessoNegadoError("Somente clientes podem criar pedidos.")
         self.validar_recebimento(data_hora)
         if self.possui_pedido_ativo(usuario.id):
             raise PedidoAtivoExistenteError()
@@ -119,8 +119,8 @@ class ListaDiaria:
         return pedido
 
     def cancelar_pedido(self, usuario: Usuario, pedido_id: int, data_hora: datetime) -> None:
-        if usuario.papel != PapelUsuario.ALUNO:
-            raise AcessoNegadoError("Somente alunos podem cancelar pedidos.")
+        if usuario.papel != PapelUsuario.CLIENTE:
+            raise AcessoNegadoError("Somente clientes podem cancelar pedidos.")
         self.validar_recebimento(data_hora)
         pedido = next((p for p in self.pedidos if p.id == pedido_id), None)
         if pedido is None or pedido.usuario_id != usuario.id:

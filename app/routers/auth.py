@@ -7,7 +7,7 @@ from app.core.security import criar_token_acesso, gerar_hash_senha, verificar_se
 from app.domain.enums import PapelUsuario
 from app.domain.usuario import Usuario
 from app.routers.deps import get_current_user, get_usuario_repo
-from app.schemas.auth import CadastroAlunoRequest, LoginRequest, TokenResponse, UsuarioOut
+from app.schemas.auth import CadastroClienteRequest, LoginRequest, TokenResponse, UsuarioOut
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
     "/login",
     response_model=TokenResponse,
     summary="Autentica usuário e retorna JWT de sessão",
-    description="Permite que Alunos e Parceiros acessem suas áreas exclusivas gerando token de 7 dias.",
+    description="Permite que Clientes e Parceiros acessem suas áreas exclusivas gerando token de 7 dias.",
 )
 def login(
     dados: LoginRequest,
@@ -56,10 +56,10 @@ def login(
     "/cadastro",
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Fluxo alternativo FA01: Cadastra um novo aluno no sistema",
+    summary="Fluxo alternativo FA01: Cadastra um novo cliente no sistema",
 )
-def cadastrar_aluno(
-    dados: CadastroAlunoRequest,
+def cadastrar_cliente(
+    dados: CadastroClienteRequest,
     usuarios: Annotated[RepositorioUsuario, Depends(get_usuario_repo)],
 ) -> TokenResponse:
     existente = usuarios.obter_por_email(dados.email)
@@ -76,7 +76,7 @@ def cadastrar_aluno(
         email=dados.email.strip().lower(),
         senha_hash=hash_senha,
         telefone=dados.telefone.strip(),
-        papel=PapelUsuario.ALUNO,
+        papel=PapelUsuario.CLIENTE,
         restaurante_id=None,
     )
     usuario_criado = usuarios.salvar(novo_usuario)

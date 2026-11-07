@@ -15,11 +15,11 @@ ON CONFLICT (id) DO NOTHING;
 -- Atualizar sequence dos restaurantes
 SELECT setval('restaurantes_id_seq', (SELECT MAX(id) FROM restaurantes));
 
--- Como Inserir Usuários (1 Aluno e 1 Parceiro Salsalito)
+-- Como Inserir Usuários (1 Cliente e 1 Parceiro Salsalito)
 -- Senha padrão para testes de login: 'senha123'
 INSERT INTO usuarios (id, nome, email, senha_hash, telefone, papel, restaurante_id)
 VALUES
-    (1, 'Erique Silva', 'erique.teste@impatech.edu.br', 'scrypt$a1b2c3d4e5f60718$1b63f962d6f275a47d98a7bf67cd379b57089c627a8317fc7457424648987731f2331b5f1be80be5e620b8f436978b7a716bc2b54ba2932d95d0952d9e96202f', '21999990001', 'ALUNO', NULL),
+    (1, 'Erique Silva', 'erique.teste@impatech.edu.br', 'scrypt$a1b2c3d4e5f60718$1b63f962d6f275a47d98a7bf67cd379b57089c627a8317fc7457424648987731f2331b5f1be80be5e620b8f436978b7a716bc2b54ba2932d95d0952d9e96202f', '21999990001', 'CLIENTE', NULL),
     (2, 'Gerente Salsalito', 'teste@salsalito.com.br', 'scrypt$a1b2c3d4e5f60718$1b63f962d6f275a47d98a7bf67cd379b57089c627a8317fc7457424648987731f2331b5f1be80be5e620b8f436978b7a716bc2b54ba2932d95d0952d9e96202f', '21999990002', 'PARCEIRO', 1)
 ON CONFLICT (id) DO UPDATE SET
     nome = EXCLUDED.nome,

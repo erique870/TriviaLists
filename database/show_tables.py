@@ -54,7 +54,7 @@ def exibir_tabelas():
 
     tabelas_ordem = [
         ("restaurantes", "Restaurantes Parceiros"),
-        ("usuarios", "Usuários (Alunos e Parceiros)"),
+        ("usuarios", "Usuários (Clientes e Parceiros)"),
         ("produtos", "Catálogo de Produtos"),
         ("listas_diarias", "Listas Diárias de Refeições"),
         ("lista_produtos", "Produtos Disponíveis na Lista (Cardápio do Dia)"),
