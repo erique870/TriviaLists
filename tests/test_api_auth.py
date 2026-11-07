@@ -192,3 +192,26 @@ def test_endpoint_exclusivo_parceiro_bloqueia_aluno(client: TestClient):
     response = client.get("/test/parceiro-only", headers=headers)
     assert response.status_code == 403
     assert "apenas para parceiros comerciais" in response.json()["detail"]
+
+
+def test_erro_de_validacao_devolve_detail_em_texto(client: TestClient):
+    """O 422 precisa ter `detail` em texto, como os demais handlers do app."""
+    resposta = client.post("/auth/cadastro", json={
+        "nome": "Carlos Silva", "email": "a@b", "telefone": "1", "senha": "senha123",
+    })
+
+    assert resposta.status_code == 422
+    detalhe = resposta.json()["detail"]
+    assert isinstance(detalhe, str), (
+        f"detail veio como {type(detalhe).__name__}; o frontend o escreve direto na "
+        f"tela e uma lista virar texto produz '[object Object]'."
+    )
+    assert "email" in detalhe and "telefone" in detalhe
+    assert "e-mail inválido" in detalhe
+
+
+def test_erro_de_validacao_no_login_tambem_e_texto(client: TestClient):
+    resposta = client.post("/auth/login", json={"email": "a@b", "senha": "x"})
+
+    assert resposta.status_code == 422
+    assert isinstance(resposta.json()["detail"], str)

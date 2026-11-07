@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg import OperationalError
@@ -89,6 +90,15 @@ def create_app(contexto=None, executar_tarefas=True):
         elif codigo in {"pedido_ativo_existente", "lista_fechada", "pedido_ja_cancelado", "lista_ainda_aberta", "lista_ainda_nao_aberta", "produto_em_uso", "pedido_cancelado", "pedido_ja_retirado"}:
             status = 409
         return JSONResponse(status_code=status, content={"detail": erro.mensagem, **erro.to_dict()})
+
+    @app.exception_handler(RequestValidationError)
+    async def dados_invalidos(request: Request, erro: RequestValidationError):
+        """Uniformiza o 422 do FastAPI: `detail` em texto, como nos demais handlers."""
+        partes = []
+        for item in erro.errors():
+            campo = ".".join(str(parte) for parte in item["loc"][1:]) or "corpo"
+            partes.append(f"{campo}: {item['msg']}")
+        return JSONResponse(status_code=422, content={"detail": "; ".join(partes)})
 
     @app.exception_handler(UniqueViolation)
     async def conflito(request: Request, erro):
