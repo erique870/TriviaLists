@@ -139,6 +139,7 @@ Fora do Escopo:
 - Gestão de logística de entregas/motoboy fora do campus da faculdade.
 - Processamento de pagamentos via Gateway/Cartão de Crédito em tempo real (o pagamento permanecerá via chave Pix informada pelo estabelecimento ou via pagamento presencial).
 - Interface administrativa para cadastro de novos parceiros. Nesta versão, a inclusão de um estabelecimento é feita diretamente na base de dados pela equipe de desenvolvimento.
+- Limite de pedidos ou de unidades por produto/lista. Os parceiros produzem sob demanda a partir da lista consolidada, sem capacidade máxima pré-declarada, portanto não há estoque a controlar nesta versão. O item permanece registrado como evolução possível: caso venha a entrar no escopo, a verificação do limite deve ocorrer dentro da mesma transação que grava o pedido, apoiada por uma restrição no banco, pelo mesmo motivo que sustenta a RN03.
 
 ## Atores/stakeholders
 
