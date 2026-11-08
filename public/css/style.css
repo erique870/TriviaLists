@@ -1,0 +1,459 @@
+/* ==============================================================================
+   TRIVIALISTS - Design System & Estilos Web (Mobile-First)
+   Inspirado na identidade visual Hubmep / WikiTech
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Nova+Square&display=swap');
+
+:root {
+    --color-dark: #00080F;
+    --color-main: #00101E;
+    --color-main-light: #06223D;
+    --color-accent: #1E63C4;
+    --color-accent-hover: #154FA0;
+    --color-accent-soft: rgba(30, 99, 196, 0.1);
+    --color-bg: #F0F2F5;
+    --color-surface: #FFFFFF;
+    --color-text: #0B1622;
+    --color-muted: #5C6A79;
+    --color-border: #DDE2E8;
+    --color-border-focus: #1E63C4;
+    --color-error: #D32F2F;
+    --color-error-bg: #FDEDED;
+    --color-success: #2E7D32;
+    --color-success-bg: #EDF7ED;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --shadow-sm: 0 2px 8px rgba(0, 16, 30, 0.04);
+    --shadow-card: 0 8px 30px rgba(0, 16, 30, 0.08);
+
+    --header-height: 64px;
+    --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+    --font-brand: 'Nova Square', sans-serif;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==============================================================================
+   HEADER PRINCIPAL
+   ============================================================================== */
+header.app-header {
+    background-color: var(--color-main);
+    color: #FFFFFF;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #FFFFFF;
+}
+
+.brand-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--color-accent), #4589EE);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(30, 99, 196, 0.4);
+}
+
+.brand-title {
+    font-family: var(--font-brand);
+    font-size: 20px;
+    letter-spacing: 0.5px;
+}
+
+.brand-badge {
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #E0E0E0;
+    font-weight: 500;
+}
+
+/* ==============================================================================
+   CONTEÚDO PRINCIPAL (LAYOUT)
+   ============================================================================== */
+main.main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ==============================================================================
+   ABAS DE NAVEGAÇÃO (ENTRAR / NOVO ALUNO)
+   ============================================================================== */
+.tabs {
+    display: flex;
+    background: #E8EBF0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    position: relative;
+}
+
+.tab-btn.active {
+    color: var(--color-accent);
+    background: var(--color-surface);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-accent);
+    border-radius: 3px 3px 0 0;
+}
+
+.card-body {
+    padding: 28px 24px;
+}
+
+.form-header {
+    margin-bottom: 22px;
+}
+
+.form-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-main);
+    margin-bottom: 4px;
+}
+
+.form-header p {
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+/* ==============================================================================
+   FORMULÁRIOS & CAMPOS
+   ============================================================================== */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.form-control {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-text);
+    background-color: #FAFAFC;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.form-control:focus {
+    background-color: #FFFFFF;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.form-control::placeholder {
+    color: #A0AAB5;
+}
+
+.field-hint {
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-top: 4px;
+}
+
+/* ==============================================================================
+   BOTÕES
+   ============================================================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    padding: 0 20px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    gap: 8px;
+}
+
+.btn-primary {
+    background-color: var(--color-accent);
+    color: #FFFFFF;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(30, 99, 196, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--color-accent-hover);
+    box-shadow: 0 6px 16px rgba(30, 99, 196, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--color-accent);
+    border: 1.5px solid var(--color-accent);
+}
+
+.btn-outline:hover {
+    background: var(--color-accent-soft);
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: var(--color-error);
+    border: 1.5px solid var(--color-error);
+    font-size: 13px;
+    height: 36px;
+    padding: 0 14px;
+}
+
+.btn-danger-outline:hover {
+    background: var(--color-error-bg);
+}
+
+/* ==============================================================================
+   ALERTAS E FEEDBACK
+   ============================================================================== */
+.alert {
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    margin-bottom: 18px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert.show {
+    display: flex;
+}
+
+.alert-danger {
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+    border: 1px solid rgba(211, 47, 47, 0.2);
+}
+
+.alert-success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+    border: 1px solid rgba(46, 125, 50, 0.2);
+}
+
+/* ==============================================================================
+   DASHBOARD / TELAS PROTEGIDAS (ALUNO & PARCEIRO)
+   ============================================================================== */
+.dashboard-container {
+    width: 100%;
+    max-width: 680px;
+}
+
+.user-profile-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    margin-bottom: 20px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.user-details h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-main);
+}
+
+.user-details p {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.role-badge.aluno {
+    background: #E8EEFC;
+    color: var(--color-accent);
+}
+
+.role-badge.parceiro {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.status-placeholder-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 32px 24px;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.status-placeholder-card h2 {
+    font-size: 18px;
+    color: var(--color-main);
+    margin-bottom: 8px;
+}
+
+.status-placeholder-card p {
+    font-size: 14px;
+    color: var(--color-muted);
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* ==============================================================================
+   FOOTER
+   ============================================================================== */
+footer.app-footer {
+    text-align: center;
+    padding: 16px;
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+/* Operações de pedidos e gestão de cardápios. */
+.dashboard-container { max-width: 940px; }
+.panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 22px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+.panel h2 { font-size: 19px; margin-bottom: 14px; }
+.panel h3 { font-size: 16px; }
+.section-heading, .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.section-heading { margin-bottom: 14px; }
+.section-heading h2 { margin: 0; }
+.form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin: 16px 0; }
+.form-grid label { font-size: 13px; font-weight: 600; }
+.form-grid .form-control { margin-top: 5px; }
+.full-width { grid-column: 1 / -1; }
+.check-label { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+fieldset { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px; }
+.entry { padding: 18px 0; border-bottom: 1px solid var(--color-border); }
+.entry:last-child { border-bottom: 0; }
+.entry p { color: var(--color-muted); margin: 5px 0; }
+.menu-item { display: grid; grid-template-columns: 1fr 82px; align-items: center; gap: 12px; padding: 12px 0; }
+.menu-item .form-control { text-align: center; }
+.menu-item small { display: block; color: var(--color-muted); }
+.order-total { font-weight: 700; margin: 12px 0; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 6px; background: var(--color-accent-soft); font-size: 12px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--color-border); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+[hidden] { display: none !important; }
+@media (min-width: 640px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .brand-badge { display: none; } .panel { padding: 16px; } .user-details p { overflow-wrap: anywhere; } .user-profile-bar { gap: 10px; padding: 12px; } }
+@media print { body * { visibility: hidden; } #painel-relatorio, #painel-relatorio * { visibility: visible; } #painel-relatorio { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; } #imprimir { display: none; } }

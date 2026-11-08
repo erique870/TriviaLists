@@ -89,7 +89,7 @@ def test_cu05_fecha_abre_e_cu06_exige_lista_fechada(contexto):
     assert lista.status == StatusLista.FECHADA
     assert contexto.gerar_relatorio_de_producao(1, lista.id) == []
 
-    contexto.abrir_lista(1, lista.id)
+    contexto.abrir_lista(1, lista.id, datetime(2026, 10, 30, 9, tzinfo=UTC))
     assert lista.status == StatusLista.ABERTA
 
 

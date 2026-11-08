@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Mapping
 
-from app.domain.enums import PapelUsuario, StatusLista, StatusPedido
+from app.domain.enums import PapelUsuario, StatusLista, StatusPedido, StatusRetirada
 from app.domain.exceptions import (
     AcessoNegadoError,
     HorarioLimiteExcedidoError,
@@ -33,6 +33,14 @@ class ListaDiaria:
 
     def abrir_lista(self) -> None:
         self.status = StatusLista.ABERTA
+
+    def validar_recebimento(self, data_hora: datetime) -> None:
+        if self.status != StatusLista.ABERTA:
+            raise RegraDeNegocioError("A lista deste restaurante está fechada.", codigo="lista_fechada", regras=("RN01",))
+        if not self.validar_horario_fechamento(data_hora):
+            raise HorarioLimiteExcedidoError()
+        if data_hora < self.horario_abertura:
+            raise RegraDeNegocioError("A lista ainda não abriu para pedidos.", codigo="lista_ainda_nao_aberta", regras=("RN01",))
 
     def fechar_lista(self) -> None:
         self.status = StatusLista.FECHADA
@@ -70,8 +78,7 @@ class ListaDiaria:
     ) -> Pedido:
         if usuario.papel != PapelUsuario.ALUNO:
             raise AcessoNegadoError("Somente alunos podem criar pedidos.")
-        if not self.validar_horario_fechamento(data_hora):
-            raise HorarioLimiteExcedidoError()
+        self.validar_recebimento(data_hora)
         if self.possui_pedido_ativo(usuario.id):
             raise PedidoAtivoExistenteError()
         if not itens:
@@ -114,14 +121,17 @@ class ListaDiaria:
     def cancelar_pedido(self, usuario: Usuario, pedido_id: int, data_hora: datetime) -> None:
         if usuario.papel != PapelUsuario.ALUNO:
             raise AcessoNegadoError("Somente alunos podem cancelar pedidos.")
-        if not self.validar_horario_fechamento(data_hora):
-            raise HorarioLimiteExcedidoError()
+        self.validar_recebimento(data_hora)
         pedido = next((p for p in self.pedidos if p.id == pedido_id), None)
         if pedido is None or pedido.usuario_id != usuario.id:
             raise AcessoNegadoError("Pedido indisponível para este usuário.")
         if pedido.status != StatusPedido.ATIVO:
             raise RegraDeNegocioError(
                 "Este pedido já está cancelado.", codigo="pedido_ja_cancelado"
+            )
+        if pedido.status_retirada == StatusRetirada.RETIRADO:
+            raise RegraDeNegocioError(
+                "Um pedido já retirado não pode ser cancelado.", codigo="pedido_ja_retirado"
             )
         pedido.status = StatusPedido.CANCELADO
 

@@ -119,16 +119,28 @@ def test_cardapio_variavel_publicado_tarde_estende_corte_por_trinta_minutos():
 
 
 def test_cardapio_fixo_nao_recebe_extensao_ao_ser_publicado_tarde():
-    lista = publicar(
-        TipoCardapio.FIXO,
-        datetime(2026, 10, 30, 11, 10, tzinfo=UTC),
-    )
-
-    assert lista.horario_fechamento == datetime(2026, 10, 30, 11, tzinfo=UTC)
-    with pytest.raises(RegraDeNegocioError, match="horário limite"):
-        lista.criar_pedido(
-            usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 11, 10, tzinfo=UTC), 1
+    with pytest.raises(ValidacaoDeDominioError, match="ultrapassado"):
+        publicar(
+            TipoCardapio.FIXO,
+            datetime(2026, 10, 30, 11, 10, tzinfo=UTC),
         )
+
+
+def test_lista_fechada_manualmente_impede_pedido_e_cancelamento():
+    lista = publicar()
+    aluno = usuario_aluno()
+    lista.criar_pedido(aluno, {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1)
+    lista.fechar_lista()
+    with pytest.raises(RegraDeNegocioError, match="fechada"):
+        lista.criar_pedido(usuario_aluno(2), {100: 1}, datetime(2026, 10, 30, 9, 1, tzinfo=UTC), 2)
+    with pytest.raises(RegraDeNegocioError, match="fechada"):
+        lista.cancelar_pedido(aluno, 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC))
+
+
+def test_lista_ainda_nao_aberta_impede_pedido():
+    lista = publicar()
+    with pytest.raises(RegraDeNegocioError, match="ainda não abriu"):
+        lista.criar_pedido(usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 7, tzinfo=UTC), 1)
 
 
 def test_um_pedido_ativo_por_aluno_e_lista_cancelamento_libera_novo_pedido():

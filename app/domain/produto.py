@@ -15,7 +15,7 @@ class Produto:
 
     def __post_init__(self) -> None:
         self.preco = Decimal(str(self.preco))
-        if self.preco < 0:
+        if not self.preco.is_finite() or self.preco < 0:
             raise ValidacaoDeDominioError("O preço do produto não pode ser negativo.")
         if not self.nome.strip():
             raise ValidacaoDeDominioError("Produto precisa ter um nome.")

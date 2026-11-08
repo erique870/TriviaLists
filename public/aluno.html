@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivialists - Área do Aluno</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/aluno" class="brand">
+            <div class="brand-icon">T</div>
+            <span class="brand-title">Trivialists</span>
+            <span class="brand-badge">Área do Aluno</span>
+        </a>
+        <button type="button" id="btn-logout" class="btn btn-danger-outline">Sair</button>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-container">
+            
+            <!-- Barra de Perfil do Aluno -->
+            <div class="user-profile-bar">
+                <div class="user-info">
+                    <div id="user-avatar" class="user-avatar">A</div>
+                    <div class="user-details">
+                        <h3 id="user-nome">Carregando...</h3>
+                        <p id="user-email">aluno@exemplo.com</p>
+                    </div>
+                </div>
+                <div>
+                    <span id="user-papel" class="role-badge aluno">ALUNO</span>
+                </div>
+            </div>
+
+            <div id="app-alert" class="alert" role="status" aria-live="polite"></div>
+            <section class="panel" aria-labelledby="titulo-avisos">
+                <h2 id="titulo-avisos">Avisos de cardápio</h2>
+                <div id="notificacoes"><p>Carregando avisos...</p></div>
+            </section>
+            <section class="panel" aria-labelledby="titulo-listas">
+                <div class="section-heading"><h2 id="titulo-listas">Cardápios do dia</h2><button id="atualizar" class="btn btn-outline">Atualizar</button></div>
+                <label for="filtro-restaurante">Restaurante</label>
+                <select id="filtro-restaurante" class="form-control"><option value="">Todos os restaurantes</option></select>
+                <div id="listas"><p>Carregando cardápios...</p></div>
+            </section>
+            <section class="panel" aria-labelledby="titulo-pedidos">
+                <h2 id="titulo-pedidos">Meus pedidos</h2>
+                <div id="pedidos"><p>Carregando pedidos...</p></div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        Trivialists &bull; Impatech &bull; Sessão Ativa
+    </footer>
+
+    <script src="/static/js/session.js"></script>
+    <script src="/static/js/aluno.js"></script>
+</body>
+</html>

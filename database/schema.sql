@@ -100,3 +100,25 @@ ON listas_diarias (status, horario_fechamento);
 -- Índice de busca de pedidos por usuário e lista
 CREATE INDEX IF NOT EXISTS idx_pedidos_usuario_lista 
 ON pedidos (usuario_id, lista_diaria_id);
+
+-- Fila transacional: uma publicação só é notificada depois de confirmada.
+CREATE TABLE IF NOT EXISTS eventos_cardapio (
+    id BIGSERIAL PRIMARY KEY,
+    lista_id BIGINT NOT NULL UNIQUE REFERENCES listas_diarias(id) ON DELETE CASCADE,
+    processado BOOLEAN NOT NULL DEFAULT FALSE,
+    enviado BOOLEAN NOT NULL DEFAULT FALSE,
+    tentativas INTEGER NOT NULL DEFAULT 0,
+    proxima_tentativa TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS notificacoes (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    lista_id BIGINT NOT NULL REFERENCES listas_diarias(id) ON DELETE CASCADE,
+    mensagem TEXT NOT NULL,
+    criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    lida BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE (usuario_id, lista_id)
+);
+CREATE INDEX IF NOT EXISTS idx_notificacoes_usuario ON notificacoes (usuario_id, id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_usuario_email_normalizado ON usuarios (LOWER(email));

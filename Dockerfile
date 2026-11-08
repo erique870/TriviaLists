@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY public ./public
 
 FROM base AS runtime
 
@@ -19,5 +20,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 FROM base AS test
 
 COPY tests ./tests
+COPY database ./database
+COPY pyproject.toml ./pyproject.toml
 
 CMD ["python", "-m", "pytest", "-q"]
