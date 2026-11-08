@@ -481,7 +481,7 @@ O cenário modelado é o da publicação tardia, em que a RN02 se manifesta: sen
 
 A Figura [fig:sequencia-fechar-lista](#fig%3Asequencia-fechar-lista) representa o encerramento de uma lista diária, relacionado aos casos de uso CU05 e CU06. Após o fechamento, o sistema consolida os pedidos registrados e disponibiliza o relatório de produção ao restaurante.
 
-É o único diagrama que abrange dois casos de uso, o que decorre da relação `<<extend>>` registrada na Figura [fig:casosdeuso](#fig%3Acasosdeuso): o acionamento de `fecharLista()` estende a execução para o CU06. Cabe observar que o encerramento da lista serve à geração do relatório, e não ao bloqueio de pedidos a RN01 é aplicada pela comparação de horários mostrada na Figura [fig:sequencia-criar-pedido](#fig%3Asequencia-criar-pedido). Ainda que o parceiro não encerre a lista manualmente, portanto, nenhum pedido é aceito fora do prazo.
+É o único diagrama que abrange dois casos de uso, o que decorre da relação `<<extend>>` registrada na Figura [fig:casosdeuso](#fig%3Acasosdeuso): o acionamento de `fecharLista()` estende a execução para o CU06. Cabe observar que o encerramento atua como uma segunda barreira, independente da RN01: conforme o fluxo principal do CU05, uma lista em status FECHADA recusa pedidos e cancelamentos mesmo dentro do prazo. A RN01 permanece sendo aplicada pela comparação de horários mostrada na Figura [fig:sequencia-criar-pedido](#fig%3Asequencia-criar-pedido), de modo que, ainda que o parceiro não encerre a lista manualmente, nenhum pedido é aceito fora do prazo.
 
 ![Diagrama de sequência do fechamento de lista diária](img/diagrama_seq_fecharLista.png) &#x20;
 
