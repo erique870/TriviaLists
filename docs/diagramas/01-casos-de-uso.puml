@@ -1,0 +1,73 @@
+@startuml casos-de-uso
+' Diagrama de casos de uso — Trivialists
+' Atualizado para o codigo em main + PR #19 (terminologia Cliente).
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+title Diagrama de casos de uso
+
+actor "Cliente" as cliente
+actor "Parceiro" as parceiro
+
+rectangle "Sistema de Pedidos" {
+
+  usecase "CU01\nVisualizar listas abertas" as CU01
+  usecase "CU02\nFazer pedido" as CU02
+  usecase "CU03\nCancelar pedido" as CU03
+  usecase "CU04\nCriar lista diaria" as CU04
+  usecase "CU05\nAbrir/Fechar lista diaria" as CU05
+  usecase "CU06\nGerar relatorio de producao" as CU06
+  usecase "CU07\nGerenciar produtos" as CU07
+  usecase "CU08\nAutenticar usuario" as CU08
+
+  usecase "Validar recebimento\n(status + janela de horario)" as VAL
+  usecase "Consultar meus pedidos" as MEUS
+  usecase "Receber aviso de cardapio" as AVISO
+
+  ' Implementados no codigo e ainda sem CU no relatorio
+  usecase "Cadastrar cliente" as NOVO #FFF3CD
+  usecase "Confirmar retirada" as RETIRADA #FFF3CD
+  usecase "Configurar horarios padrao" as HORARIOS #FFF3CD
+}
+
+cliente --> CU01
+cliente --> CU02
+cliente --> CU03
+cliente --> MEUS
+cliente --> AVISO
+cliente --> CU08
+cliente --> NOVO
+
+parceiro --> CU04
+parceiro --> CU05
+parceiro --> CU06
+parceiro --> CU07
+parceiro --> CU08
+parceiro --> RETIRADA
+parceiro --> HORARIOS
+
+CU02 ..> VAL : <<include>>
+CU03 ..> VAL : <<include>>
+CU02 ..> CU01 : <<include>>
+CU05 ..> CU06 : <<extend>>
+CU04 ..> AVISO : <<include>>
+
+note bottom of VAL
+  Substitui "Validar horario de fechamento".
+  ListaDiaria.validar_recebimento verifica, nesta ordem:
+  status ABERTA, antes do fechamento (RN01/RN02),
+  depois da abertura.
+end note
+
+note bottom of NOVO
+  Em amarelo: implementados no codigo e ainda
+  sem caso de uso proprio no relatorio.
+  Cadastrar cliente e hoje o FA01 do CU08; a revisao
+  da AV1 pediu que fosse caso de uso separado.
+end note
+
+@enduml

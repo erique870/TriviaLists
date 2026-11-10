@@ -1,0 +1,109 @@
+@startuml sequencia-criar-lista
+' CU04 — Criar lista diaria, cenario de publicacao tardia (RN02).
+' Conferido contra app/application/restaurante_service.py e app/domain/restaurante.py.
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+title CU04 - Criar lista diaria (publicacao tardia, RN02)
+
+actor Parceiro as parceiro
+participant ":PainelParceiro" as app
+participant ":RouterOperacoes" as rota
+participant ":Deps" as deps
+participant ":ServicoRestaurante" as svc
+participant ":Restaurante" as rest
+participant ":ListaDiaria" as lista
+participant ":Notificacoes" as notif
+database ":PostgreSQL" as db
+
+parceiro -> app : publica o cardapio do dia
+activate app
+app -> rota : POST /api/parceiro/listas\n{data, produtoIds, horarios?} + Bearer
+activate rota
+
+rota -> deps : get_current_user(token) + require_parceiro
+activate deps
+deps -> db : SELECT * FROM usuarios WHERE id = sub
+db --> deps : usuario {papel, restauranteId}
+deps --> rota : parceiro
+deactivate deps
+note right of deps
+  RN05: o restauranteId vem da sessao,
+  nunca do corpo da requisicao.
+end note
+
+rota -> svc : criar_lista_diaria(parceiroId, data,\nprodutoIds, agora, horarios?)
+activate svc
+
+group transacao [uma unica transacao no banco]
+  svc -> svc : _produtos_do_restaurante(restauranteId, produtoIds)
+  note right of svc
+    Recusa produto de outro restaurante
+    e produto repetido na mesma lista.
+  end note
+
+  svc -> db : SELECT nextval('listas_diarias_id_seq')
+  db --> svc : listaId
+
+  svc -> rest : criar_lista_diaria(listaId, dia, produtos,\npublicadaEm, horarioAbertura?, horarioFechamento?)
+  activate rest
+  rest -> rest : abertura = horarioAbertura ou horarioPadraoAbertura
+  rest -> rest : fechamento = horarioFechamento ou horarioPadraoFechamento
+  rest -> rest : recusa se fechamento <= abertura
+
+  alt dia == hoje e tipoCardapio == VARIAVEL\ne publicadaEm >= horarioPadraoFechamento
+    rest -> rest : fechamento = publicadaEm + 30min
+    note right of rest
+      RN02 - publicacao tardia de cardapio variavel.
+      A regra substitui o horario informado, inclusive
+      quando o parceiro pediu um fechamento maior.
+    end note
+  end
+
+  rest -> rest : recusa se fechamento <= publicadaEm
+  rest -> lista : <<create>>(listaId, restauranteId, dia,\nabertura, fechamento, ABERTA, produtos)
+  activate lista
+  lista --> rest : lista
+  deactivate lista
+  rest --> svc : lista
+  deactivate rest
+
+  svc -> db : INSERT INTO listas_diarias ...\nINSERT INTO lista_produtos ...
+  db --> svc : ok
+
+  svc -> notif : agendar(listaId)
+  activate notif
+  notif -> db : INSERT INTO eventos_cardapio (listaId)\nON CONFLICT DO NOTHING
+  db --> notif : ok
+  notif --> svc : ok
+  deactivate notif
+  note right of notif
+    RF06: o evento e gravado na mesma transacao
+    da lista. Se a transacao falhar, nenhum aviso
+    e prometido.
+  end note
+end
+
+svc --> rota : lista
+deactivate svc
+rota --> app : 201 Created {id, horarioFechamento efetivo}
+deactivate rota
+app --> parceiro : exibe o horario de fechamento efetivo
+deactivate app
+
+== Em segundo plano, apos a resposta ==
+
+rota -> notif : ServicoNotificacao.processar()
+activate notif
+notif -> db : SELECT ... FROM eventos_cardapio\nWHERE NOT processado FOR UPDATE SKIP LOCKED
+db --> notif : eventos
+notif -> db : INSERT INTO notificacoes\nSELECT id FROM usuarios WHERE papel='CLIENTE'\nON CONFLICT DO NOTHING
+notif -> db : UPDATE eventos_cardapio SET processado = TRUE
+deactivate notif
+note over notif, db
+  A entrega e assincrona: a resposta ao parceiro nao
+  espera. A fila sobrevive a reinicio do processo, e
+  a rotina periodica repete o que ficou pendente.
+end note
+
+@enduml
