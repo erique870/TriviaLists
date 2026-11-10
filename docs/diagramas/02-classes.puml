@@ -1,0 +1,135 @@
+@startuml classes
+' Diagrama de classes — dominio do Trivialists
+' Atributos e metodos conferidos contra app/domain/ em main + PR #19.
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+title Diagrama de classes (dominio)
+
+class Usuario {
+  -id: Int
+  -nome: String
+  -email: String
+  -senhaHash: String
+  -telefone: String
+  -papel: Enum {CLIENTE, PARCEIRO}
+  -restauranteId: Int [0..1]
+}
+note right of Usuario
+  RN05: CLIENTE nao tem restauranteId;
+  PARCEIRO e obrigado a ter. A invariante
+  e validada no __post_init__ e repetida
+  no CHECK ck_usuario_papel_restaurante.
+end note
+
+class Restaurante {
+  -id: Int
+  -nome: String
+  -endereco: String
+  -horarioPadraoAbertura: Time
+  -horarioPadraoFechamento: Time
+  -tipoCardapio: Enum {FIXO, VARIAVEL}
+  -ativo: Boolean
+  +criarListaDiaria(listaId, dia, produtos, publicadaEm, horarioAbertura?, horarioFechamento?): ListaDiaria
+  +obterListasHistorico(): ListaDiaria[]
+  +obterTipoCardapio(): Enum
+}
+
+class ListaDiaria {
+  -id: Int
+  -restauranteId: Int
+  -data: Date
+  -horarioAbertura: Timestamp
+  -horarioFechamento: Timestamp
+  -status: Enum {ABERTA, FECHADA}
+  +abrirLista()
+  +fecharLista()
+  +validarRecebimento(dataHora)
+  +validarHorarioFechamento(dataHora): Boolean
+  +possuiPedidoAtivo(usuarioId): Boolean
+  +criarPedido(usuario, itens, dataHora, pedidoId): Pedido
+  +cancelarPedido(usuario, pedidoId, dataHora)
+  +gerarRelatorioDeProducao(): Linha[]
+  +vincularProdutos(produtos)
+}
+
+class Produto {
+  -id: Int
+  -restauranteId: Int
+  -nome: String
+  -descricao: String
+  -preco: Decimal
+  -disponivel: Boolean
+  +obterPreco(): Decimal
+}
+
+class Pedido {
+  -id: Int
+  -listaDiariaId: Int
+  -usuarioId: Int
+  -dataHoraPedido: Timestamp
+  -status: Enum {ATIVO, CANCELADO}
+  -statusRetirada: Enum {PENDENTE, RETIRADO}
+  -valorTotal: Decimal {derivado}
+  +calcularTotal(): Decimal
+  +confirmarRetirada()
+}
+note right of Pedido
+  status e statusRetirada sao independentes.
+  Alcancaveis: ATIVO+PENDENTE, ATIVO+RETIRADO,
+  CANCELADO+PENDENTE.
+  CANCELADO+RETIRADO e impedido pelas guardas
+  de confirmarRetirada e cancelarPedido.
+  valorTotal e derivado dos itens no __post_init__;
+  a coluna no banco nunca e lida de volta.
+end note
+
+class ItemPedido {
+  -id: Int
+  -pedidoId: Int
+  -produtoId: Int
+  -quantidade: Int
+  -precoUnitario: Decimal
+  +calcularSubtotal(): Decimal
+}
+note bottom of ItemPedido
+  RN04: precoUnitario e copia do preco
+  vigente na gravacao, nao referencia ao Produto.
+end note
+
+class Notificacao {
+  -id: Int
+  -usuarioId: Int
+  -listaId: Int
+  -mensagem: String
+  -criadaEm: Timestamp
+  -lida: Boolean
+}
+
+class EventoCardapio {
+  -id: Int
+  -listaId: Int
+  -processado: Boolean
+  -enviado: Boolean
+  -tentativas: Int
+  -proximaTentativa: Timestamp
+}
+note bottom of EventoCardapio
+  Fila transacional do RF06. O evento e gravado
+  na mesma transacao da lista; a distribuicao
+  ocorre depois, em segundo plano.
+end note
+
+Usuario "0..1" -- "0..*" Restaurante : administra >
+Restaurante "1" *-- "0..*" ListaDiaria
+Restaurante "1" *-- "0..*" Produto
+ListaDiaria "0..*" o-- "0..*" Produto : cardapio do dia >
+ListaDiaria "1" o-- "0..*" Pedido
+Usuario "1" -- "0..*" Pedido : realiza >
+Pedido "1" *-- "1..*" ItemPedido
+Produto "1" -- "0..*" ItemPedido
+ListaDiaria "1" -- "0..1" EventoCardapio
+Usuario "1" -- "0..*" Notificacao
+ListaDiaria "1" -- "0..*" Notificacao
+
+@enduml

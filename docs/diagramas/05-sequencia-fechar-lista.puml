@@ -1,0 +1,105 @@
+@startuml sequencia-fechar-lista
+' CU05 + CU06 — Fechar lista e gerar relatorio de producao.
+' Conferido contra app/routers/operacoes.py e app/application/restaurante_service.py.
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+title CU05 + CU06 - Fechar lista e gerar relatorio
+
+actor Parceiro as parceiro
+participant ":PainelParceiro" as app
+participant ":RouterOperacoes" as rota
+participant ":ServicoRestaurante" as svc
+participant ":ListaDiaria" as lista
+database ":PostgreSQL" as db
+
+note over parceiro, db
+  Pre-condicao: existe uma ListaDiaria do restaurante do parceiro.
+end note
+
+parceiro -> app : clica em "Fechar e gerar relatorio"
+activate app
+app -> rota : POST /api/parceiro/listas/{id}/fechar + Bearer
+activate rota
+note right of rota
+  require_parceiro ja garantiu o papel;
+  _obter_lista_do_parceiro recusa lista
+  de outro restaurante (RN05).
+end note
+
+rota -> svc : fechar_lista(parceiroId, listaId)
+activate svc
+
+group transacao 1 [fechamento]
+  svc -> db : SELECT ... FROM listas_diarias\nWHERE id = ? FOR UPDATE
+  db --> svc : lista
+  svc -> lista : fechar_lista()
+  activate lista
+  lista -> lista : status = FECHADA
+  lista --> svc : ok
+  deactivate lista
+  svc -> db : UPDATE listas_diarias SET status = 'FECHADA'
+  db --> svc : ok
+  svc -> svc : gerar_relatorio_de_producao(parceiroId, listaId)
+  note right of svc
+    Resultado descartado aqui. Serve como
+    verificacao antes do commit; o relatorio
+    devolvido ao parceiro e o da transacao 2.
+  end note
+end
+
+svc --> rota : lista
+deactivate svc
+
+rota -> svc : obter_relatorio(parceiroId, listaId)
+activate svc
+group transacao 2 [relatorio]
+  svc -> db : SELECT lista + pedidos + itens
+  db --> svc : dados
+  svc -> lista : gerar_relatorio_de_producao()
+  activate lista
+  loop para cada pedido ATIVO
+    lista -> lista : soma quantidades por produto
+  end
+  lista --> svc : totaisPorProduto
+  deactivate lista
+  svc -> svc : relatorio(lista, itens)
+end
+svc --> rota : {listaId, data, itens, totalPedidos, valorTotal}
+deactivate svc
+
+rota --> app : 200 OK {lista, relatorio}
+deactivate rota
+app --> parceiro : exibe a lista consolidada, pronta para impressao
+deactivate app
+
+note over lista, db
+  RN01: com a lista FECHADA, validar_recebimento recusa
+  pedido e cancelamento mesmo dentro do prazo.
+  A confirmacao de retirada continua permitida, por nao
+  passar por validar_recebimento.
+  Apenas pedidos ATIVO entram no relatorio; os RETIRADO
+  continuam contando, os CANCELADO nao.
+end note
+
+== Caminho alternativo: fechamento automatico ==
+
+participant ":Trabalhador" as job
+job -> svc : encerrar_expiradas(agora)
+activate svc
+svc -> db : SELECT id FROM listas_diarias\nWHERE status='ABERTA' AND horarioFechamento <= agora\nFOR UPDATE SKIP LOCKED
+db --> svc : listas vencidas
+loop para cada lista vencida
+  svc -> lista : fechar_lista()
+  svc -> db : UPDATE listas_diarias SET status = 'FECHADA'
+end
+deactivate svc
+note right of job
+  Rotina a cada WORKER_INTERVAL_SECONDS (30s).
+  O SKIP LOCKED evita que duas instancias
+  fechem a mesma lista.
+  A validacao do prazo em cada operacao nao
+  depende desta rotina.
+end note
+
+@enduml

@@ -1,0 +1,126 @@
+@startuml sequencia-criar-pedido
+' CU02 — Fazer pedido. Conferido contra app/application/cliente_service.py,
+' app/domain/lista_diaria.py e app/infrastructure/postgres.py.
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+title CU02 - Fazer pedido (cenario principal)
+
+actor Cliente as cli
+participant ":AppCliente" as app
+participant ":RouterOperacoes" as rota
+participant ":Deps" as deps
+participant ":ServicoCliente" as svc
+participant ":ListaDiaria" as lista
+participant ":Pedido" as pedido
+participant ":RepositorioPedido" as repo
+database ":PostgreSQL" as db
+
+note over cli, db
+  Pre-condicao (CU01): o cliente ja visualizou a lista aberta e o cardapio do dia.
+end note
+
+cli -> app : seleciona produtos e quantidades
+activate app
+app -> rota : POST /api/pedidos\n{listaId, itens} + Bearer
+activate rota
+
+rota -> deps : get_current_user(token)
+activate deps
+deps -> deps : decodifica JWT (HS256)
+deps -> db : SELECT * FROM usuarios WHERE id = sub
+db --> deps : usuario
+deps -> deps : require_cliente: papel == CLIENTE
+deps --> rota : usuario
+deactivate deps
+note right of deps
+  RN05: a identidade vem da sessao.
+  O papel e lido do banco, nunca do token.
+end note
+
+rota -> svc : criar_pedido(usuarioId, listaId, itens)
+activate svc
+
+group transacao [uma unica transacao no banco]
+  svc -> repo : listas.obter_por_id(listaId)
+  activate repo
+  repo -> db : SELECT ... FROM listas_diarias\nWHERE id = ? FOR UPDATE
+  db --> repo : lista + produtos + pedidos
+  repo --> svc : lista
+  deactivate repo
+
+  svc -> repo : pedidos.proximo_id()
+  activate repo
+  repo -> db : SELECT nextval('pedidos_id_seq')
+  db --> repo : pedidoId
+  repo --> svc : pedidoId
+  deactivate repo
+  note right of svc
+    O identificador e reservado antes de mutar
+    o agregado em memoria.
+  end note
+
+  svc -> lista : criar_pedido(cliente, itens, agora, pedidoId)
+  activate lista
+
+  lista -> lista : validar_recebimento(agora)
+  note right of lista
+    Nesta ordem: status ABERTA,
+    antes do horarioFechamento (RN01/RN02),
+    depois do horarioAbertura.
+  end note
+
+  lista -> lista : possui_pedido_ativo(usuarioId)
+  note right of lista : RN03 - verificacao em memoria
+
+  loop para cada item selecionado
+    lista -> lista : produto = produtos[produtoId]
+    lista -> lista : recusa se nao disponivel
+    lista -> lista : precoUnitario = produto.obter_preco()
+  end
+  note right of lista
+    RN04: o preco vem do servidor,
+    nunca do corpo da requisicao.
+  end note
+
+  lista -> pedido : <<create>>(pedidoId, listaId, usuarioId,\nagora, itens, ATIVO, PENDENTE)
+  activate pedido
+  pedido -> pedido : calcular_total()
+  pedido --> lista : pedido
+  deactivate pedido
+  lista --> svc : pedido
+  deactivate lista
+
+  svc -> repo : pedidos.salvar(pedido)
+  activate repo
+  repo -> db : INSERT INTO pedidos ...\nINSERT INTO itens_pedido ...
+  alt indice uk_pedido_ativo violado
+    db --> repo : UniqueViolation
+    repo --> svc : PedidoAtivoExistenteError
+    note right of repo
+      RN03 sob concorrencia. A verificacao em memoria
+      nao basta: duas requisicoes simultaneas passam
+      pelo possui_pedido_ativo e a segunda e barrada
+      pelo indice unico parcial
+      uk_pedido_ativo (usuarioId, listaDiariaId)
+      WHERE status = 'ATIVO'.
+    end note
+  else gravacao aceita
+    db --> repo : ok
+  end
+  repo --> svc : ok
+  deactivate repo
+end
+note over svc, db
+  RN04: o commit da transacao e o instante
+  em que o pedido passa a valer.
+end note
+
+svc --> rota : pedido
+deactivate svc
+rota --> app : 201 Created {id, valorTotal, itens}
+deactivate rota
+app --> cli : exibe a confirmacao com o ID do pedido
+deactivate app
+
+@enduml

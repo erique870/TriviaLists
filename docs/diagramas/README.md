@@ -1,0 +1,67 @@
+# Diagramas
+
+Fontes PlantUML dos diagramas do relatório. Antes desta pasta existiam apenas os PNG
+em `img/`, sem fonte: alterar um diagrama exigia refazê-lo do zero.
+
+| Fonte | Gera | Caso de uso |
+|---|---|---|
+| `01-casos-de-uso.puml` | `img/Casos_de_uso.png` | visão geral |
+| `02-classes.puml` | `img/Classes.png` | domínio |
+| `03-sequencia-criar-pedido.puml` | `img/Sequencia_FazerPedido.png` | CU02 |
+| `04-sequencia-criar-lista.puml` | `img/Sequencia_CriarLista.png` | CU04 |
+| `05-sequencia-fechar-lista.puml` | `img/Sequencia_FecharLista.png` | CU05 + CU06 |
+| `06-atividades.puml` | `img/Atividades.png` | fluxo completo |
+| `07-componentes.puml` | `img/Componentes.png` | arquitetura |
+
+Os nomes de saída são os que o `README.md` já referencia, então regerar não exige
+mexer no relatório.
+
+## Como gerar
+
+PlantUML precisa de Java. Qualquer um dos caminhos abaixo serve.
+
+**VS Code**: instale a extensão PlantUML (`jebbs.plantuml`), abra o `.puml` e use
+`Alt+D` para pré-visualizar ou a paleta de comandos, `PlantUML: Export Current Diagram`.
+
+**Linha de comando**, com o `plantuml.jar` baixado de plantuml.com:
+
+```bash
+java -jar plantuml.jar -tpng -o ../../img docs/diagramas/*.puml
+```
+
+**IntelliJ**: o plugin PlantUML Integration renderiza no editor.
+
+### Sem Java na máquina
+
+`gerar_urls.py` monta as URLs de um servidor PlantUML a partir dos `.puml`.
+Ele não faz requisição: só imprime.
+
+```bash
+python docs/diagramas/gerar_urls.py            # URLs para abrir no navegador
+python docs/diagramas/gerar_urls.py --curl     # comandos prontos, já com o nome de saída certo
+python docs/diagramas/gerar_urls.py --svg      # SVG em vez de PNG
+```
+
+O servidor público recebe o diagrama codificado na URL. Para não enviar nada
+para fora, suba o servidor oficial em contêiner e aponte para ele:
+
+```bash
+docker run -d -p 8080:8080 plantuml/plantuml-server:jetty
+python docs/diagramas/gerar_urls.py --servidor http://localhost:8080 --curl
+```
+
+Editores online, se preferir colar o texto à mão: plantuml.com/plantuml,
+planttext.com e kroki.io.
+
+## Convenções adotadas
+
+Nenhum `skinparam ParticipantPadding`. As versões anteriores usavam essa diretiva,
+e o aviso `Please use CSS style instead of skinparam ParticipantPadding` ficou
+renderizado dentro dos PNG entregues no relatório.
+
+Apelidos de participante não usam palavras reservadas do PlantUML. `par`, por
+exemplo, abre bloco paralelo e não pode ser apelido do ator Parceiro.
+
+Atributos e métodos foram conferidos contra o código, não contra a versão anterior
+do diagrama. Onde o diagrama antigo divergia do código, o código prevaleceu, exceto
+na terminologia do ator, que segue a padronização em Cliente.

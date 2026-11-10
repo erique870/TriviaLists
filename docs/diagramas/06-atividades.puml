@@ -1,0 +1,84 @@
+@startuml atividades
+' Fluxo completo: publicacao, pedido, retirada e fechamento.
+' Conferido contra os servicos de aplicacao e o dominio.
+skinparam shadowing false
+title Diagrama de atividades - do cardapio a retirada
+
+|Parceiro|
+start
+:Cadastrar produtos e definir horarios;
+:Selecionar produtos e publicar o cardapio;
+
+|Sistema|
+:Validar posse dos produtos (RN05);
+if (cardapio VARIAVEL publicado hoje\napos o horario padrao?) then ([sim])
+  :Aplicar RN02:\nfechamento = publicacao + 30min;
+else ([nao])
+  :Manter o horario informado\nou o horario padrao;
+endif
+:Recusar se o fechamento ja passou;
+
+fork
+  :Gravar lista e vinculos\ncom status ABERTA;
+fork again
+  :Gravar evento de cardapio\nna mesma transacao;
+end fork
+:Confirmar a transacao;
+
+:Distribuir avisos em segundo plano (RF06);
+
+|Cliente|
+:Visualizar listas abertas (CU01);
+:Selecionar produtos e quantidades;
+:Confirmar o pedido;
+
+|Sistema|
+if (lista ABERTA e dentro da janela\nde abertura e fechamento?) then ([nao])
+  |Cliente|
+  :Receber recusa:\nlista fechada ou fora do prazo;
+  stop
+else ([sim])
+endif
+
+if (ja existe pedido ATIVO\ndeste cliente na lista?) then ([sim])
+  |Cliente|
+  :Receber recusa (RN03);
+  stop
+else ([nao])
+endif
+
+|Sistema|
+:Copiar o preco vigente de cada produto (RN04);
+:Criar Pedido com status ATIVO\ne statusRetirada PENDENTE;
+:Gravar pedido e itens na mesma transacao;
+note right
+  O indice unico parcial uk_pedido_ativo
+  barra o pedido duplicado que escapar
+  da verificacao em memoria.
+end note
+
+|Cliente|
+:Receber a confirmacao com o ID;
+
+|Parceiro|
+:Entregar a refeicao;
+:Confirmar a retirada;
+
+|Sistema|
+:statusRetirada = RETIRADO;
+note right
+  Permitido com a lista aberta ou fechada.
+  Repetir a confirmacao nao duplica nada.
+  A partir daqui o pedido nao pode ser cancelado.
+end note
+
+|Sistema|
+:Atingir o horarioFechamento\nou o parceiro fechar manualmente;
+:Mudar o status da lista para FECHADA;
+:Consolidar os pedidos ATIVO por produto (RF05);
+
+|Parceiro|
+:Visualizar e imprimir o relatorio;
+stop
+
+@enduml

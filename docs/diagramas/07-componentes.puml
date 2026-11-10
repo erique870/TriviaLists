@@ -1,0 +1,81 @@
+@startuml componentes
+' Diagrama de componentes. Substitui a versao anterior, que descrevia
+' Vercel Serverless, Node.js e MySQL — nenhum deles em uso.
+' A direcao das dependencias foi conferida extraindo os imports de cada pacote.
+skinparam shadowing false
+skinparam componentStyle rectangle
+title Diagrama de componentes
+
+actor "Cliente" as cli
+actor "Parceiro" as parceiro
+
+node "Navegador" {
+  component "public/\ncliente.html, parceiro.html, js/" as web
+}
+
+node "Contentor da aplicacao\nDocker + uvicorn (ASGI)" {
+
+  package "Borda HTTP" {
+    component "app/routers/\nauth, operacoes, web, deps" as routers
+    component "app/schemas/\nvalidacao Pydantic" as schemas
+  }
+
+  package "Transversal" {
+    component "app/core/\nconfig, security, clock, erros" as core
+  }
+
+  package "Casos de uso" {
+    component "app/application/\nServicoCliente, ServicoRestaurante,\nServicoNotificacao" as app
+  }
+
+  package "Portas" {
+    interface "ports.py\n6 protocolos de repositorio" as ports
+  }
+
+  package "Adaptadores" {
+    component "app/infrastructure/postgres.py\npsycopg3 + pool + transacao" as pg
+    component "app/application/repositories.py\nem memoria (teste e demonstracao)" as mem
+  }
+
+  component "app/domain/\nregras puras" as dom
+  component "Trabalhador periodico\nfechamento + notificacao" as job
+  component "app/main.py + contexto.py\nraiz de composicao" as raiz
+}
+
+database "PostgreSQL" as db
+cloud "Webhook de push\n(opcional)" as hook
+
+cli --> web
+parceiro --> web
+web --> routers : HTTPS / JSON
+routers --> schemas
+routers --> core : token, relogio, erros
+routers --> app
+app --> ports
+app ..> dom : usa as regras
+ports <|.. pg
+ports <|.. mem
+pg --> db : SQL
+job --> app
+app --> hook : POST assincrono\nIdempotency-Key
+raiz ..> ports : escolhe um adaptador\nconforme DATABASE_URL
+
+note right of dom
+  app/domain importa apenas app.domain.
+  app/application nunca importa infrastructure
+  nem routers. Verificado por extracao de imports.
+end note
+
+note bottom of ports
+  Os dois adaptadores satisfazem os mesmos
+  seis protocolos, o que permite rodar os casos
+  de uso sem banco nos testes.
+end note
+
+note bottom of db
+  Alem de persistir, repete em CHECK as invariantes
+  do dominio e garante a RN03 sob concorrencia
+  pelo indice unico parcial uk_pedido_ativo.
+end note
+
+@enduml
