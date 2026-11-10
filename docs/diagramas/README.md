@@ -31,6 +31,28 @@ java -jar plantuml.jar -tpng -o ../../img docs/diagramas/*.puml
 
 **IntelliJ**: o plugin PlantUML Integration renderiza no editor.
 
+### Sem Java na máquina
+
+`gerar_urls.py` monta as URLs de um servidor PlantUML a partir dos `.puml`.
+Ele não faz requisição: só imprime.
+
+```bash
+python docs/diagramas/gerar_urls.py            # URLs para abrir no navegador
+python docs/diagramas/gerar_urls.py --curl     # comandos prontos, já com o nome de saída certo
+python docs/diagramas/gerar_urls.py --svg      # SVG em vez de PNG
+```
+
+O servidor público recebe o diagrama codificado na URL. Para não enviar nada
+para fora, suba o servidor oficial em contêiner e aponte para ele:
+
+```bash
+docker run -d -p 8080:8080 plantuml/plantuml-server:jetty
+python docs/diagramas/gerar_urls.py --servidor http://localhost:8080 --curl
+```
+
+Editores online, se preferir colar o texto à mão: plantuml.com/plantuml,
+planttext.com e kroki.io.
+
 ## Convenções adotadas
 
 Nenhum `skinparam ParticipantPadding`. As versões anteriores usavam essa diretiva,
