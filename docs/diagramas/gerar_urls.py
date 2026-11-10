@@ -47,13 +47,13 @@ def main() -> None:
     saida = pasta.parent.parent / "img"
 
     nomes = {
-        "01-casos-de-uso": "DiagramaCasosDeUso",
-        "02-classes": "diagrama_classe",
-        "03-sequencia-criar-pedido": "diagrama_seq_criarPedido",
-        "04-sequencia-criar-lista": "diagrama_seq_criarLista",
-        "05-sequencia-fechar-lista": "diagrama_seq_fecharLista",
-        "06-atividades": "DiagramaAtividadesNovo",
-        "07-componentes": "diagrama_componente",
+        "01-casos-de-uso": "Casos_de_uso",
+        "02-classes": "Classes",
+        "03-sequencia-criar-pedido": "Sequencia_FazerPedido",
+        "04-sequencia-criar-lista": "Sequencia_CriarLista",
+        "05-sequencia-fechar-lista": "Sequencia_FecharLista",
+        "06-atividades": "Atividades",
+        "07-componentes": "Componentes",
     }
 
     for arquivo in sorted(pasta.glob("*.puml")):

@@ -5,13 +5,13 @@ em `img/`, sem fonte: alterar um diagrama exigia refazê-lo do zero.
 
 | Fonte | Gera | Caso de uso |
 |---|---|---|
-| `01-casos-de-uso.puml` | `img/DiagramaCasosDeUso.png` | visão geral |
-| `02-classes.puml` | `img/diagrama_classe.png` | domínio |
-| `03-sequencia-criar-pedido.puml` | `img/diagrama_seq_criarPedido.png` | CU02 |
-| `04-sequencia-criar-lista.puml` | `img/diagrama_seq_criarLista.png` | CU04 |
-| `05-sequencia-fechar-lista.puml` | `img/diagrama_seq_fecharLista.png` | CU05 + CU06 |
-| `06-atividades.puml` | `img/DiagramaAtividadesNovo.png` | fluxo completo |
-| `07-componentes.puml` | `img/diagrama_componente.png` | arquitetura |
+| `01-casos-de-uso.puml` | `img/Casos_de_uso.png` | visão geral |
+| `02-classes.puml` | `img/Classes.png` | domínio |
+| `03-sequencia-criar-pedido.puml` | `img/Sequencia_FazerPedido.png` | CU02 |
+| `04-sequencia-criar-lista.puml` | `img/Sequencia_CriarLista.png` | CU04 |
+| `05-sequencia-fechar-lista.puml` | `img/Sequencia_FecharLista.png` | CU05 + CU06 |
+| `06-atividades.puml` | `img/Atividades.png` | fluxo completo |
+| `07-componentes.puml` | `img/Componentes.png` | arquitetura |
 
 Os nomes de saída são os que o `README.md` já referencia, então regerar não exige
 mexer no relatório.

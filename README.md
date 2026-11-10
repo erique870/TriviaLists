@@ -260,7 +260,7 @@ RN05 & CU02 a CU07 & Usuario, Restaurante*Rastreabilidade entre requisitos, caso
 
 A Figura [fig:casosdeuso](#fig%3Acasosdeuso) apresenta o diagrama de casos de uso do sistema de pedidos, com a fronteira do sistema, os dois atores e as relações de inclusão e extensão entre os casos de uso. Em seguida detalhamos os elementos relevantes de cada um.
 
-![Diagrama de casos de uso](img/DiagramaCasosDeUso.png) &#x20;
+![Diagrama de casos de uso](img/Casos_de_uso.png) &#x20;
 
 *Diagrama de casos de uso* <a id="fig:casosdeuso"></a>
 
@@ -445,7 +445,7 @@ Os **Produto** de um restaurante compõem seu catálogo permanente; a associaç�
 
 Quanto aos relacionamentos, três merecem destaque. A relação entre Pedido e ItemPedido é de **composição**: um item de pedido não possui significado fora do pedido que o contém, e a multiplicidade `1..*` registra que não existe pedido sem itens. Já a relação entre ListaDiaria e Pedido é de **agregação**, e não de composição, porque o pedido é um registro de negócio — há pagamento associado e ele compõe o relatório de produção — que não deve ser eliminado junto com a lista. Por fim, o atributo `precoUnitario` em ItemPedido duplica intencionalmente o `preco` de Produto: o valor é copiado no instante do pedido para que reajustes posteriores no cardápio não alterem retroativamente pedidos já registrados.
 
-![Diagrama de Classes](img/diagrama_classe.png) &#x20;
+![Diagrama de Classes](img/Classes.png) &#x20;
 
 *Diagrama de Classes* <a id="fig:classes"></a>
 
@@ -463,7 +463,7 @@ A Figura [fig:sequencia-criar-pedido](#fig%3Asequencia-criar-pedido) apresenta 
 
 Observe que as duas validações antecedem qualquer gravação. O `validarHorarioFechamento()` é enviado à própria `:ListaDiaria`, pois é ela que detém o `horarioFechamento`; o horário corrente vai como argumento por provir do relógio do servidor, e não do dispositivo do cliente. O `possuiPedidoAtivo()` aplica a RN03. Aprovadas ambas, o Pedido é instanciado com status ATIVO e o fragmento `loop` percorre os itens selecionados, obtendo o preço de cada Produto no servidor nunca a partir da requisição do cliente.
 
-![Diagrama de sequência da criação de pedido](img/diagrama_seq_criarPedido.png) &#x20;
+![Diagrama de sequência da criação de pedido](img/Sequencia_FazerPedido.png) &#x20;
 
 *Diagrama de sequência da criação de pedido* <a id="fig:sequencia-criar-pedido"></a>
 
@@ -473,7 +473,7 @@ A Figura [fig:sequencia-criar-lista](#fig%3Asequencia-criar-lista) descreve a c
 
 O cenário modelado é o da publicação tardia, em que a RN02 se manifesta: sendo o cardápio do tipo VARIAVEL e estando o horário padrão já ultrapassado, o horarioFechamento efetivo passa a ser o instante da publicação acrescido de trinta minutos. O `restauranteId` é obtido da sessão autenticada, e não do corpo da requisição, em cumprimento à RN05. Por fim, a chamada `notificarClientes()` é a única mensagem **assíncrona** do sistema: a resposta ao parceiro não aguarda o envio das notificações, que pode alcançar centenas de destinatários.
 
-![Diagrama de sequência da criação de lista diária](img/diagrama_seq_criarLista.png) &#x20;
+![Diagrama de sequência da criação de lista diária](img/Sequencia_CriarLista.png) &#x20;
 
 *Diagrama de sequência da criação de lista diária* <a id="fig:sequencia-criar-lista"></a>
 
@@ -483,7 +483,7 @@ A Figura [fig:sequencia-fechar-lista](#fig%3Asequencia-fechar-lista) representa
 
 É o único diagrama que abrange dois casos de uso, o que decorre da relação `<<extend>>` registrada na Figura [fig:casosdeuso](#fig%3Acasosdeuso): o acionamento de `fecharLista()` estende a execução para o CU06. Cabe observar que o encerramento atua como uma segunda barreira, independente da RN01: conforme o fluxo principal do CU05, uma lista em status FECHADA recusa pedidos e cancelamentos mesmo dentro do prazo. A RN01 permanece sendo aplicada pela comparação de horários mostrada na Figura [fig:sequencia-criar-pedido](#fig%3Asequencia-criar-pedido), de modo que, ainda que o parceiro não encerre a lista manualmente, nenhum pedido é aceito fora do prazo.
 
-![Diagrama de sequência do fechamento de lista diária](img/diagrama_seq_fecharLista.png) &#x20;
+![Diagrama de sequência do fechamento de lista diária](img/Sequencia_FecharLista.png) &#x20;
 
 *Diagrama de sequência do fechamento de lista diária* <a id="fig:sequencia-fechar-lista"></a>
 
@@ -493,7 +493,7 @@ A Figura [fig:sequencia-fechar-lista](#fig%3Asequencia-fechar-lista) representa
 
 A Figura [fig:atividades](#fig%3Aatividades) modela o fluxo de trabalho completo do processo de realização de pedidos e fechamento de listas, destacando a separação de responsabilidades entre os atores Cliente, Restaurante e o Sistema por meio de raias (*swimlanes*). O fluxo contempla a aplicação da regra de negócio RN02 para a extensão do horário limite em publicações tardias, além de ramificações paralelas (*fork*/*join*) para a notificação de clientes e geração do relatório de produção simultaneamente ao encerramento da lista. As chamadas de ação correspondem aos métodos definidos no diagrama de classes da Seção [sec:classes](#sec%3Aclasses) (Usuario, Restaurante, ListaDiaria e Pedido).
 
-![Diagrama de Atividades](img/DiagramaAtividadesNovo.png) &#x20;
+![Diagrama de Atividades](img/Atividades.png) &#x20;
 
 *Diagrama de Atividades* <a id="fig:atividades"></a>
 
@@ -545,7 +545,7 @@ O fluxo principal opera de maneira transacional e síncrona:
 
 A Figura [fig:diagrama\_componentes](#fig%3Adiagrama_componentes) ilustra o diagrama de componentes e o fluxo de dados do sistema.
 
-![Diagrama de Componentes](img/diagrama_componente.png) &#x20;
+![Diagrama de Componentes](img/Componentes.png) &#x20;
 
 *Diagrama de Componentes* <a id="fig:diagrama_componentes"></a>
 
