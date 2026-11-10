@@ -10,11 +10,11 @@ from app.application.notificacao_service import ServicoNotificacao
 from app.application.restaurante_service import ServicoRestaurante
 from app.core.clock import agora
 from app.domain import StatusLista, StatusPedido, StatusRetirada, Usuario
-from app.routers.deps import require_aluno, require_parceiro
+from app.routers.deps import require_cliente, require_parceiro
 from app.schemas.operacoes import HorariosRequest, ListaRequest, PedidoRequest, ProdutoRequest, ProdutoUpdate
 
 router = APIRouter(prefix="/api", tags=["Listas, pedidos e cardápios"])
-Aluno = Annotated[Usuario, Depends(require_aluno)]
+Cliente = Annotated[Usuario, Depends(require_cliente)]
 Parceiro = Annotated[Usuario, Depends(require_parceiro)]
 
 
@@ -53,12 +53,12 @@ def pedido_publico(pedido, ctx):
 
 
 @router.get("/restaurantes")
-def restaurantes(usuario: Aluno, ctx=Depends(contexto)):
+def restaurantes(usuario: Cliente, ctx=Depends(contexto)):
     return [{"id": r.id, "nome": r.nome, "tipo_cardapio": r.tipo_cardapio} for r in ctx.restaurantes.listar_ativos()]
 
 
 @router.get("/listas")
-def listas_abertas(usuario: Aluno, restaurante_id: int | None = Query(default=None, gt=0),
+def listas_abertas(usuario: Cliente, restaurante_id: int | None = Query(default=None, gt=0),
                    servico=Depends(cliente), ctx=Depends(contexto)):
     listas = servico.listar_abertas(usuario.id, restaurante_id)
     return {"listas": [lista_publica(l, ctx) for l in listas],
@@ -66,18 +66,18 @@ def listas_abertas(usuario: Aluno, restaurante_id: int | None = Query(default=No
 
 
 @router.post("/pedidos", status_code=201)
-def criar_pedido(dados: PedidoRequest, usuario: Aluno, servico=Depends(cliente), ctx=Depends(contexto)):
+def criar_pedido(dados: PedidoRequest, usuario: Cliente, servico=Depends(cliente), ctx=Depends(contexto)):
     pedido = servico.criar_pedido(usuario.id, dados.lista_id, {i.produto_id: i.quantidade for i in dados.itens})
     return pedido_publico(pedido, ctx)
 
 
 @router.get("/pedidos")
-def meus_pedidos(usuario: Aluno, servico=Depends(cliente), ctx=Depends(contexto)):
+def meus_pedidos(usuario: Cliente, servico=Depends(cliente), ctx=Depends(contexto)):
     return [pedido_publico(p, ctx) for p in servico.meus_pedidos(usuario.id)]
 
 
 @router.get("/pedidos/{pedido_id}")
-def consultar_pedido(pedido_id: int, usuario: Aluno, ctx=Depends(contexto)):
+def consultar_pedido(pedido_id: int, usuario: Cliente, ctx=Depends(contexto)):
     pedido = ctx.pedidos.obter_por_id(pedido_id)
     if pedido is None or pedido.usuario_id != usuario.id:
         raise HTTPException(404, "Pedido não encontrado.")
@@ -85,7 +85,7 @@ def consultar_pedido(pedido_id: int, usuario: Aluno, ctx=Depends(contexto)):
 
 
 @router.post("/pedidos/{pedido_id}/cancelar")
-def cancelar_pedido(pedido_id: int, usuario: Aluno, servico=Depends(cliente), ctx=Depends(contexto)):
+def cancelar_pedido(pedido_id: int, usuario: Cliente, servico=Depends(cliente), ctx=Depends(contexto)):
     return pedido_publico(servico.cancelar_pedido(usuario.id, pedido_id), ctx)
 
 
@@ -158,8 +158,8 @@ def pedidos_da_lista(lista_id: int, usuario: Parceiro, servico=Depends(parceiro)
     resultado = []
     for pedido in servico.listar_pedidos(usuario.id, lista_id):
         dados = pedido_publico(pedido, ctx)
-        aluno = ctx.usuarios.obter_por_id(pedido.usuario_id)
-        dados["aluno"] = aluno.nome if aluno is not None else "Aluno não encontrado"
+        cliente = ctx.usuarios.obter_por_id(pedido.usuario_id)
+        dados["cliente"] = cliente.nome if cliente is not None else "Cliente não encontrado"
         resultado.append(dados)
     return resultado
 
@@ -171,12 +171,12 @@ def confirmar_retirada(lista_id: int, pedido_id: int, usuario: Parceiro,
 
 
 @router.get("/notificacoes")
-def notificacoes(usuario: Aluno, ctx=Depends(contexto)):
+def notificacoes(usuario: Cliente, ctx=Depends(contexto)):
     return ctx.notificacoes.listar(usuario.id)
 
 
 @router.post("/notificacoes/{notificacao_id}/ler")
-def ler_notificacao(notificacao_id: int, usuario: Aluno, ctx=Depends(contexto)):
+def ler_notificacao(notificacao_id: int, usuario: Cliente, ctx=Depends(contexto)):
     if not ctx.notificacoes.marcar_lida(usuario.id, notificacao_id):
         raise HTTPException(404, "Notificação não encontrada.")
     return {"mensagem": "Notificação marcada como lida."}

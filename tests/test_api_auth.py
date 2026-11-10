@@ -9,13 +9,13 @@ from app.core.security import criar_token_acesso, gerar_hash_senha
 from app.domain.enums import PapelUsuario
 from app.domain.usuario import Usuario
 from app.main import app
-from app.routers.deps import get_usuario_repo, require_aluno, require_parceiro
+from app.routers.deps import get_usuario_repo, require_cliente, require_parceiro
 
 
 # Rotas simuladas para testar guards de autorização por papel (RN05)
-@app.get("/test/aluno-only")
-def rota_apenas_aluno(usuario: Usuario = pytest.importorskip("fastapi").Depends(require_aluno)):
-    return {"msg": f"Bem-vindo aluno {usuario.nome}"}
+@app.get("/test/cliente-only")
+def rota_apenas_cliente(usuario: Usuario = pytest.importorskip("fastapi").Depends(require_cliente)):
+    return {"msg": f"Bem-vindo cliente {usuario.nome}"}
 
 
 @app.get("/test/parceiro-only")
@@ -25,13 +25,13 @@ def rota_apenas_parceiro(usuario: Usuario = pytest.importorskip("fastapi").Depen
 
 @pytest.fixture
 def repo_memoria() -> RepositorioUsuariosEmMemoria:
-    usuario_aluno = Usuario(
+    usuario_cliente = Usuario(
         id=1,
-        nome="Erique Aluno",
+        nome="Erique Cliente",
         email="erique@impatech.edu.br",
-        senha_hash=gerar_hash_senha("SenhaAluno123"),
+        senha_hash=gerar_hash_senha("SenhaCliente123"),
         telefone="21999998888",
-        papel=PapelUsuario.ALUNO,
+        papel=PapelUsuario.CLIENTE,
         restaurante_id=None,
     )
     usuario_parceiro = Usuario(
@@ -43,7 +43,7 @@ def repo_memoria() -> RepositorioUsuariosEmMemoria:
         papel=PapelUsuario.PARCEIRO,
         restaurante_id=1,
     )
-    return RepositorioUsuariosEmMemoria([usuario_aluno, usuario_parceiro])
+    return RepositorioUsuariosEmMemoria([usuario_cliente, usuario_parceiro])
 
 
 @pytest.fixture
@@ -54,10 +54,10 @@ def client(repo_memoria: RepositorioUsuariosEmMemoria) -> Generator[TestClient, 
     app.dependency_overrides.clear()
 
 
-def test_login_aluno_sucesso(client: TestClient):
+def test_login_cliente_sucesso(client: TestClient):
     payload = {
         "email": "erique@impatech.edu.br",
-        "senha": "SenhaAluno123",
+        "senha": "SenhaCliente123",
     }
     response = client.post("/auth/login", json=payload)
     assert response.status_code == 200
@@ -66,7 +66,7 @@ def test_login_aluno_sucesso(client: TestClient):
     assert "access_token" in dados
     assert dados["token_type"] == "bearer"
     assert dados["usuario"]["email"] == "erique@impatech.edu.br"
-    assert dados["usuario"]["papel"] == "ALUNO"
+    assert dados["usuario"]["papel"] == "CLIENTE"
     assert dados["usuario"]["restaurante_id"] is None
 
 
@@ -103,9 +103,9 @@ def test_login_usuario_inexistente(client: TestClient):
     assert "E-mail ou senha incorretos." in response.json()["detail"]
 
 
-def test_cadastro_aluno_sucesso_fa01(client: TestClient):
+def test_cadastro_cliente_sucesso_fa01(client: TestClient):
     payload = {
-        "nome": "Novo Aluno Impatech",
+        "nome": "Novo Cliente Impatech",
         "email": "novato@impatech.edu.br",
         "telefone": "21977776666",
         "senha": "NovaSenhaSegura123",
@@ -115,9 +115,9 @@ def test_cadastro_aluno_sucesso_fa01(client: TestClient):
 
     dados = response.json()
     assert "access_token" in dados
-    assert dados["usuario"]["nome"] == "Novo Aluno Impatech"
+    assert dados["usuario"]["nome"] == "Novo Cliente Impatech"
     assert dados["usuario"]["email"] == "novato@impatech.edu.br"
-    assert dados["usuario"]["papel"] == "ALUNO"
+    assert dados["usuario"]["papel"] == "CLIENTE"
     assert dados["usuario"]["restaurante_id"] is None
 
     # Tenta logar com a conta recém criada
@@ -128,7 +128,7 @@ def test_cadastro_aluno_sucesso_fa01(client: TestClient):
     assert login_res.status_code == 200
 
 
-def test_cadastro_aluno_email_duplicado_conflito(client: TestClient):
+def test_cadastro_cliente_email_duplicado_conflito(client: TestClient):
     payload = {
         "nome": "Tentativa Duplicada",
         "email": "erique@impatech.edu.br",
@@ -141,7 +141,7 @@ def test_cadastro_aluno_email_duplicado_conflito(client: TestClient):
 
 
 def test_me_retorna_usuario_autenticado(client: TestClient):
-    token = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "ALUNO"})
+    token = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "CLIENTE"})
     headers = {"Authorization": f"Bearer {token}"}
 
     response = client.get("/auth/me", headers=headers)
@@ -150,7 +150,7 @@ def test_me_retorna_usuario_autenticado(client: TestClient):
     dados = response.json()
     assert dados["id"] == 1
     assert dados["email"] == "erique@impatech.edu.br"
-    assert dados["papel"] == "ALUNO"
+    assert dados["papel"] == "CLIENTE"
 
 
 def test_me_sem_token_retorna_401(client: TestClient):
@@ -176,18 +176,18 @@ def test_me_token_malformado_retorna_401(client: TestClient):
     assert "Token de autenticação inválido" in response.json()["detail"]
 
 
-def test_endpoint_exclusivo_aluno_bloqueia_parceiro(client: TestClient):
+def test_endpoint_exclusivo_cliente_bloqueia_parceiro(client: TestClient):
     token_parceiro = criar_token_acesso({"sub": "2", "email": "salsalito@teste.com", "papel": "PARCEIRO"})
     headers = {"Authorization": f"Bearer {token_parceiro}"}
 
-    response = client.get("/test/aluno-only", headers=headers)
+    response = client.get("/test/cliente-only", headers=headers)
     assert response.status_code == 403
-    assert "apenas para alunos" in response.json()["detail"]
+    assert "apenas para clientes" in response.json()["detail"]
 
 
-def test_endpoint_exclusivo_parceiro_bloqueia_aluno(client: TestClient):
-    token_aluno = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "ALUNO"})
-    headers = {"Authorization": f"Bearer {token_aluno}"}
+def test_endpoint_exclusivo_parceiro_bloqueia_cliente(client: TestClient):
+    token_cliente = criar_token_acesso({"sub": "1", "email": "erique@impatech.edu.br", "papel": "CLIENTE"})
+    headers = {"Authorization": f"Bearer {token_cliente}"}
 
     response = client.get("/test/parceiro-only", headers=headers)
     assert response.status_code == 403

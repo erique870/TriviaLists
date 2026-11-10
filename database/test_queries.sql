@@ -28,7 +28,7 @@ ORDER BY r.nome, p.nome;
 
 
 -- ------------------------------------------------------------------------------
--- TESTE 2 (CU02): Criar um Pedido (Aluno ID 1 na Lista ID 1)
+-- TESTE 2 (CU02): Criar um Pedido (Cliente ID 1 na Lista ID 1)
 -- Insere o pedido e 2 itens com preço congelado (RN04)
 -- ------------------------------------------------------------------------------
 DO $$
@@ -54,7 +54,7 @@ END $$;
 
 -- ------------------------------------------------------------------------------
 -- TESTE 3 (RN03 - Pedido Único Ativo):
--- Tentar criar um SEGUNDO pedido ATIVO para o mesmo Aluno 1 na mesma Lista 1
+-- Tentar criar um SEGUNDO pedido ATIVO para o mesmo Cliente 1 na mesma Lista 1
 -- ESPERADO: O banco DEVE RECUSAR com erro:
 -- "duplicate key value violates unique constraint uk_pedido_ativo"
 -- ------------------------------------------------------------------------------
@@ -80,11 +80,11 @@ VALUES (1, 1, NOW(), 22.00, 'ATIVO', 'PENDENTE');
 
 -- ------------------------------------------------------------------------------
 -- TESTE 6 (RN05 - Integridade de Papel e Restaurante):
--- Tentar criar um ALUNO com restaurante_id não-nulo
+-- Tentar criar um CLIENTE com restaurante_id não-nulo
 -- ESPERADO: Erro de violação da constraint "ck_usuario_papel_restaurante"
 -- ------------------------------------------------------------------------------
 INSERT INTO usuarios (nome, email, senha_hash, telefone, papel, restaurante_id)
-VALUES ('Aluno Invalido', 'invalido@impatech.edu.br', 'hash', '21999999999', 'ALUNO', 1);
+VALUES ('Cliente Invalido', 'invalido@impatech.edu.br', 'hash', '21999999999', 'CLIENTE', 1);
 
 
 -- ------------------------------------------------------------------------------

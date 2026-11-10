@@ -21,14 +21,14 @@ UTC = timezone.utc
 DIA = date(2026, 10, 30)
 
 
-def usuario_aluno(usuario_id: int = 1) -> Usuario:
+def usuario_cliente(usuario_id: int = 1) -> Usuario:
     return Usuario(
         id=usuario_id,
-        nome=f"Aluno {usuario_id}",
-        email=f"aluno{usuario_id}@exemplo.com",
+        nome=f"Cliente {usuario_id}",
+        email=f"cliente{usuario_id}@exemplo.com",
         senha_hash="hash-seguro",
         telefone="11999990000",
-        papel=PapelUsuario.ALUNO,
+        papel=PapelUsuario.CLIENTE,
     )
 
 
@@ -65,7 +65,7 @@ def test_pedido_e_aceito_antes_do_horario_limite():
     lista = publicar()
 
     pedido = lista.criar_pedido(
-        usuario_aluno(), {100: 2}, datetime(2026, 10, 30, 10, 59, tzinfo=UTC), 1
+        usuario_cliente(), {100: 2}, datetime(2026, 10, 30, 10, 59, tzinfo=UTC), 1
     )
 
     assert pedido.valor_total == Decimal("51.00")
@@ -78,7 +78,7 @@ def test_pedido_na_hora_limite_ou_depois_e_rejeitado(hora):
 
     with pytest.raises(RegraDeNegocioError, match="horário limite"):
         lista.criar_pedido(
-            usuario_aluno(),
+            usuario_cliente(),
             {100: 1},
             datetime(2026, 10, 30, *hora, tzinfo=UTC),
             1,
@@ -104,14 +104,14 @@ def test_cardapio_variavel_publicado_tarde_estende_corte_por_trinta_minutos():
     )
 
     pedido = lista.criar_pedido(
-        usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 11, 39, tzinfo=UTC), 1
+        usuario_cliente(), {100: 1}, datetime(2026, 10, 30, 11, 39, tzinfo=UTC), 1
     )
 
     assert pedido.status == StatusPedido.ATIVO
     assert lista.horario_fechamento == datetime(2026, 10, 30, 11, 40, tzinfo=UTC)
     with pytest.raises(RegraDeNegocioError, match="horário limite"):
         lista.criar_pedido(
-            usuario_aluno(2),
+            usuario_cliente(2),
             {100: 1},
             datetime(2026, 10, 30, 11, 40, tzinfo=UTC),
             2,
@@ -128,49 +128,49 @@ def test_cardapio_fixo_nao_recebe_extensao_ao_ser_publicado_tarde():
 
 def test_lista_fechada_manualmente_impede_pedido_e_cancelamento():
     lista = publicar()
-    aluno = usuario_aluno()
-    lista.criar_pedido(aluno, {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1)
+    cliente = usuario_cliente()
+    lista.criar_pedido(cliente, {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1)
     lista.fechar_lista()
     with pytest.raises(RegraDeNegocioError, match="fechada"):
-        lista.criar_pedido(usuario_aluno(2), {100: 1}, datetime(2026, 10, 30, 9, 1, tzinfo=UTC), 2)
+        lista.criar_pedido(usuario_cliente(2), {100: 1}, datetime(2026, 10, 30, 9, 1, tzinfo=UTC), 2)
     with pytest.raises(RegraDeNegocioError, match="fechada"):
-        lista.cancelar_pedido(aluno, 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC))
+        lista.cancelar_pedido(cliente, 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC))
 
 
 def test_lista_ainda_nao_aberta_impede_pedido():
     lista = publicar()
     with pytest.raises(RegraDeNegocioError, match="ainda não abriu"):
-        lista.criar_pedido(usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 7, tzinfo=UTC), 1)
+        lista.criar_pedido(usuario_cliente(), {100: 1}, datetime(2026, 10, 30, 7, tzinfo=UTC), 1)
 
 
-def test_um_pedido_ativo_por_aluno_e_lista_cancelamento_libera_novo_pedido():
+def test_um_pedido_ativo_por_cliente_e_lista_cancelamento_libera_novo_pedido():
     lista = publicar()
-    aluno = usuario_aluno()
-    lista.criar_pedido(aluno, {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1)
+    cliente = usuario_cliente()
+    lista.criar_pedido(cliente, {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1)
 
     with pytest.raises(PedidoAtivoExistenteError, match="pedido ativo") as erro:
         lista.criar_pedido(
-            aluno, {100: 1}, datetime(2026, 10, 30, 9, 1, tzinfo=UTC), 2
+            cliente, {100: 1}, datetime(2026, 10, 30, 9, 1, tzinfo=UTC), 2
         )
     assert erro.value.codigo == "pedido_ativo_existente"
     assert erro.value.regras == ("RN03",)
 
-    lista.cancelar_pedido(aluno, 1, datetime(2026, 10, 30, 9, 2, tzinfo=UTC))
+    lista.cancelar_pedido(cliente, 1, datetime(2026, 10, 30, 9, 2, tzinfo=UTC))
     novo = lista.criar_pedido(
-        aluno, {100: 2}, datetime(2026, 10, 30, 9, 3, tzinfo=UTC), 2
+        cliente, {100: 2}, datetime(2026, 10, 30, 9, 3, tzinfo=UTC), 2
     )
     assert novo.status == StatusPedido.ATIVO
 
 
 def test_relatorio_soma_somente_pedidos_ativos_e_preco_fica_registrado():
     lista = publicar()
-    aluno = usuario_aluno()
+    cliente = usuario_cliente()
     pedido = lista.criar_pedido(
-        aluno, {100: 2}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
+        cliente, {100: 2}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
     )
-    lista.cancelar_pedido(aluno, 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC))
+    lista.cancelar_pedido(cliente, 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC))
     lista.criar_pedido(
-        usuario_aluno(2), {100: 3}, datetime(2026, 10, 30, 9, 2, tzinfo=UTC), 2
+        usuario_cliente(2), {100: 3}, datetime(2026, 10, 30, 9, 2, tzinfo=UTC), 2
     )
     lista.produtos[100].preco = Decimal("30.00")
 
@@ -180,15 +180,15 @@ def test_relatorio_soma_somente_pedidos_ativos_e_preco_fica_registrado():
     ]
 
 
-def test_aluno_nao_pode_cancelar_pedido_de_outra_pessoa():
+def test_cliente_nao_pode_cancelar_pedido_de_outra_pessoa():
     lista = publicar()
     lista.criar_pedido(
-        usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
+        usuario_cliente(), {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
     )
 
     with pytest.raises(AcessoNegadoError, match="indisponível") as erro:
         lista.cancelar_pedido(
-            usuario_aluno(2), 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC)
+            usuario_cliente(2), 1, datetime(2026, 10, 30, 9, 1, tzinfo=UTC)
         )
     assert erro.value.codigo == "acesso_negado"
     assert erro.value.regras == ("RN05",)
@@ -199,14 +199,14 @@ def test_pedido_nao_aceita_produto_de_fora_do_cardapio():
 
     with pytest.raises(ValidacaoDeDominioError, match="não pertence ao cardápio"):
         lista.criar_pedido(
-            usuario_aluno(), {999: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
+            usuario_cliente(), {999: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
         )
 
 
 def test_pedido_confirma_retirada():
     lista = publicar()
     pedido = lista.criar_pedido(
-        usuario_aluno(), {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
+        usuario_cliente(), {100: 1}, datetime(2026, 10, 30, 9, tzinfo=UTC), 1
     )
 
     pedido.confirmar_retirada()

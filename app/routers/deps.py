@@ -62,14 +62,14 @@ def get_current_user(
     return usuario
 
 
-def require_aluno(
+def require_cliente(
     usuario: Annotated[Usuario, Depends(get_current_user)],
 ) -> Usuario:
-    """Garante que o usuário autenticado possui o papel ALUNO (RN05)."""
-    if usuario.papel != PapelUsuario.ALUNO:
+    """Garante que o usuário autenticado possui o papel CLIENTE (RN05)."""
+    if usuario.papel != PapelUsuario.CLIENTE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Operação permitida apenas para alunos.",
+            detail="Operação permitida apenas para clientes.",
         )
     return usuario
 

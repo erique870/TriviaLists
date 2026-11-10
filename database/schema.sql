@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(255) NOT NULL UNIQUE,
     senha_hash VARCHAR(255) NOT NULL,
     telefone VARCHAR(30) NOT NULL,
-    papel VARCHAR(20) NOT NULL CHECK (papel IN ('ALUNO', 'PARCEIRO')),
+    papel VARCHAR(20) NOT NULL CHECK (papel IN ('CLIENTE', 'PARCEIRO')),
     restaurante_id BIGINT REFERENCES restaurantes(id) ON DELETE RESTRICT,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- RN05: Aluno não pode ter restaurante vinculado; Parceiro é obrigado a ter
+    -- RN05: Cliente não pode ter restaurante vinculado; Parceiro é obrigado a ter
     CONSTRAINT ck_usuario_papel_restaurante CHECK (
-        (papel = 'ALUNO' AND restaurante_id IS NULL) OR
+        (papel = 'CLIENTE' AND restaurante_id IS NULL) OR
         (papel = 'PARCEIRO' AND restaurante_id IS NOT NULL)
     )
 );
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS itens_pedido (
 -- PERFORMANCE E INTEGRIDADE DE NEGÓCIO
 -- ==============================================================================
 
--- RN03: Restrição de unicidade parcial para garantir que cada aluno só tenha 1 pedido ATIVO por lista.
+-- RN03: Restrição de unicidade parcial para garantir que cada cliente só tenha 1 pedido ATIVO por lista.
 -- Se o pedido for cancelado o índice ignora e permite novo pedido.
 CREATE UNIQUE INDEX IF NOT EXISTS uk_pedido_ativo 
 ON pedidos (usuario_id, lista_diaria_id) 

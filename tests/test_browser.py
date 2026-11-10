@@ -14,7 +14,7 @@ import pytest
 pytestmark = pytest.mark.skipif(os.getenv("RUN_BROWSER_TESTS") != "1", reason="Teste de navegador opcional.")
 
 
-def test_parceiro_publica_aluno_pede_cancela_e_parceiro_fecha():
+def test_parceiro_publica_cliente_pede_cancela_e_parceiro_fecha():
     playwright = pytest.importorskip("playwright.sync_api")
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -39,8 +39,8 @@ def test_parceiro_publica_aluno_pede_cancela_e_parceiro_fecha():
             browser = p.chromium.launch(executable_path=chrome, headless=True, args=["--no-sandbox"])
             erros = []
             parceiro = browser.new_page(viewport={"width": 1280, "height": 900})
-            aluno = browser.new_page(viewport={"width": 390, "height": 844})
-            for pagina in (parceiro, aluno):
+            cliente = browser.new_page(viewport={"width": 390, "height": 844})
+            for pagina in (parceiro, cliente):
                 pagina.on("pageerror", lambda erro: erros.append(str(erro)))
             def login(pagina, email, caminho):
                 pagina.goto(url)
@@ -77,22 +77,22 @@ def test_parceiro_publica_aluno_pede_cancela_e_parceiro_fecha():
             parceiro.locator("#lista-fechamento").fill("23:59")
             parceiro.locator("#form-lista [type=submit]").click()
             playwright.expect(parceiro.locator("#app-alert")).to_contain_text("publicado!")
-            login(aluno, "aluno@impatech.edu.br", "/aluno")
-            playwright.expect(aluno.locator("#notificacoes")).to_contain_text("publicou o cardápio")
-            aluno.locator("#listas input[data-produto]").fill("2")
-            aluno.locator("#listas [type=submit]").click()
-            playwright.expect(aluno.locator("#app-alert")).to_contain_text("confirmado!")
-            playwright.expect(aluno.locator("#pedidos")).to_contain_text("51,00")
-            aluno.locator("[data-cancelar]").click()
-            playwright.expect(aluno.locator("#app-alert")).to_contain_text("cancelado com sucesso")
-            aluno.locator("#listas input[data-produto]").fill("1")
-            aluno.locator("#listas [type=submit]").click()
-            playwright.expect(aluno.locator("#app-alert")).to_contain_text("confirmado!")
+            login(cliente, "cliente@impatech.edu.br", "/cliente")
+            playwright.expect(cliente.locator("#notificacoes")).to_contain_text("publicou o cardápio")
+            cliente.locator("#listas input[data-produto]").fill("2")
+            cliente.locator("#listas [type=submit]").click()
+            playwright.expect(cliente.locator("#app-alert")).to_contain_text("confirmado!")
+            playwright.expect(cliente.locator("#pedidos")).to_contain_text("51,00")
+            cliente.locator("[data-cancelar]").click()
+            playwright.expect(cliente.locator("#app-alert")).to_contain_text("cancelado com sucesso")
+            cliente.locator("#listas input[data-produto]").fill("1")
+            cliente.locator("#listas [type=submit]").click()
+            playwright.expect(cliente.locator("#app-alert")).to_contain_text("confirmado!")
             parceiro.locator('[data-acao="fechar"]').click()
             playwright.expect(parceiro.locator("#relatorio")).to_contain_text("25,50")
             playwright.expect(parceiro.locator("#relatorio")).to_contain_text("1 pedido(s)")
             parceiro.locator('[data-acao="pedidos"]').click()
-            playwright.expect(parceiro.locator("#pedidos-retirada")).to_contain_text("Aluno de demonstração")
+            playwright.expect(parceiro.locator("#pedidos-retirada")).to_contain_text("Cliente de demonstração")
             playwright.expect(parceiro.locator("[data-confirmar-retirada]")).to_have_count(1)
             parceiro.locator("[data-confirmar-retirada]").click()
             playwright.expect(parceiro.locator("#app-alert")).to_contain_text("retirada confirmada")
@@ -104,16 +104,16 @@ def test_parceiro_publica_aluno_pede_cancela_e_parceiro_fecha():
             playwright.expect(parceiro.locator("#app-alert")).to_contain_text("vinculado a listas ou pedidos")
             playwright.expect(parceiro.locator("#produtos [data-excluir]")).to_have_count(1)
             playwright.expect(parceiro.locator("#relatorio")).to_contain_text("25,50")
-            aluno.locator("#atualizar").click()
-            playwright.expect(aluno.locator("#listas")).to_contain_text("Nenhum restaurante")
-            playwright.expect(aluno.locator("#pedidos")).to_contain_text("CONCLUÍDO")
-            playwright.expect(aluno.locator("#pedidos")).to_contain_text("RETIRADO")
-            playwright.expect(aluno.locator("[data-cancelar]")).to_have_count(0)
-            assert aluno.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+            cliente.locator("#atualizar").click()
+            playwright.expect(cliente.locator("#listas")).to_contain_text("Nenhum restaurante")
+            playwright.expect(cliente.locator("#pedidos")).to_contain_text("CONCLUÍDO")
+            playwright.expect(cliente.locator("#pedidos")).to_contain_text("RETIRADO")
+            playwright.expect(cliente.locator("[data-cancelar]")).to_have_count(0)
+            assert cliente.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
             # A expiração é validada pelo servidor e leva de volta ao acesso.
-            aluno.evaluate("localStorage.setItem('trivialists_token', 'token.invalido.assinatura')")
-            aluno.reload()
-            aluno.wait_for_url(url + "/?msg=login_necessario")
+            cliente.evaluate("localStorage.setItem('trivialists_token', 'token.invalido.assinatura')")
+            cliente.reload()
+            cliente.wait_for_url(url + "/?msg=login_necessario")
             assert not erros, erros
             artefatos = os.getenv("BROWSER_ARTIFACT_DIR")
             if artefatos:

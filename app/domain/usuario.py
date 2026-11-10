@@ -19,9 +19,9 @@ class Usuario:
             raise ValidacaoDeDominioError(
                 "Nome, e-mail e hash da senha são obrigatórios."
             )
-        if self.papel == PapelUsuario.ALUNO and self.restaurante_id is not None:
+        if self.papel == PapelUsuario.CLIENTE and self.restaurante_id is not None:
             raise ValidacaoDeDominioError(
-                "Aluno não pode estar associado a um restaurante."
+                "Cliente não pode estar associado a um restaurante."
             )
         if self.papel == PapelUsuario.PARCEIRO and self.restaurante_id is None:
             raise ValidacaoDeDominioError(

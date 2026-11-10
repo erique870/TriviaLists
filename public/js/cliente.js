@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('atualizar').addEventListener('click', atualizar);
     filtro.addEventListener('change', atualizar);
     try {
-        if (!await protegerRota('ALUNO')) return;
+        if (!await protegerRota('CLIENTE')) return;
         const restaurantes = await api('/api/restaurantes');
         filtro.innerHTML += restaurantes.map(r => `<option value="${r.id}">${escapar(r.nome)}</option>`).join('');
         await atualizar();

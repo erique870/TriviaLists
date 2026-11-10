@@ -33,16 +33,16 @@ def test_verificar_senha_valida_corretamente():
 def test_criar_e_decodificar_token_jwt():
     payload = {
         "sub": "42",
-        "email": "aluno@exemplo.com",
-        "papel": "ALUNO",
+        "email": "cliente@exemplo.com",
+        "papel": "CLIENTE",
         "restaurante_id": None,
     }
     token = criar_token_acesso(payload, expira_em=timedelta(minutes=30))
 
     dados = decodificar_token_acesso(token)
     assert dados["sub"] == "42"
-    assert dados["email"] == "aluno@exemplo.com"
-    assert dados["papel"] == "ALUNO"
+    assert dados["email"] == "cliente@exemplo.com"
+    assert dados["papel"] == "CLIENTE"
     assert dados["restaurante_id"] is None
     assert "exp" in dados
     assert "iat" in dados

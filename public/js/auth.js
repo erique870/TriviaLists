@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (usuario) sessaoExistente = { usuario };
     } catch { /* A tela de acesso continua disponível para tentar novamente. */ }
     if (sessaoExistente && sessaoExistente.usuario) {
-        if (sessaoExistente.usuario.papel === 'ALUNO') {
-            window.location.href = '/aluno';
+        if (sessaoExistente.usuario.papel === 'CLIENTE') {
+            window.location.href = '/cliente';
             return;
         } else if (sessaoExistente.usuario.papel === 'PARCEIRO') {
             window.location.href = '/parceiro';
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Gerenciamento de Abas (Entrar / Novo Aluno)
+    // Gerenciamento de Abas (Entrar / Novo Cliente)
     const tabLogin = document.getElementById('tab-login');
     const tabCadastro = document.getElementById('tab-cadastro');
     const formLogin = document.getElementById('form-login-container');
@@ -105,8 +105,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     salvarSessao(data.access_token, data.usuario);
 
                     // Redirecionamento por papel (RN05)
-                    if (data.usuario.papel === 'ALUNO') {
-                        window.location.href = '/aluno';
+                    if (data.usuario.papel === 'CLIENTE') {
+                        window.location.href = '/cliente';
                     } else if (data.usuario.papel === 'PARCEIRO') {
                         window.location.href = '/parceiro';
                     } else {
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --------------------------------------------------------------------------
-    // SUBMISSÃO DO CADASTRO DE ALUNO (FA01)
+    // SUBMISSÃO DO CADASTRO DE CLIENTE (FA01)
     // --------------------------------------------------------------------------
     const formCadastroForm = document.getElementById('form-cadastro');
     const btnCadastrar = document.getElementById('btn-cadastrar');
@@ -168,10 +168,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     salvarSessao(data.access_token, data.usuario);
                     exibirAlerta('Conta criada com sucesso! Redirecionando...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/aluno';
+                        window.location.href = '/cliente';
                     }, 600);
                 } else if (response.status === 409) {
-                    exibirAlerta(data.detail || 'Já existe um aluno cadastrado com este e-mail.');
+                    exibirAlerta(data.detail || 'Já existe um cliente cadastrado com este e-mail.');
                 } else {
                     exibirAlerta(data.detail || 'Erro ao realizar cadastro. Verifique os dados.');
                 }
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 exibirAlerta('Erro de conexão ao tentar cadastrar. Tente novamente.');
             } finally {
                 btnCadastrar.disabled = false;
-                btnCadastrar.textContent = 'Criar Conta de Aluno';
+                btnCadastrar.textContent = 'Criar Conta de Cliente';
             }
         });
     }

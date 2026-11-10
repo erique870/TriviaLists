@@ -1,12 +1,12 @@
 from app.schemas.auth import (
-    CadastroAlunoRequest,
+    CadastroClienteRequest,
     LoginRequest,
     TokenResponse,
     UsuarioOut,
 )
 
 __all__ = [
-    "CadastroAlunoRequest",
+    "CadastroClienteRequest",
     "LoginRequest",
     "TokenResponse",
     "UsuarioOut",

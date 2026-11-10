@@ -23,7 +23,7 @@ class ServicoNotificacao:
             restaurante = self.contexto.restaurantes.obter_por_id(lista.restaurante_id)
             payload = {"evento_id": evento["id"], "tipo": "cardapio_publicado", "lista_id": lista.id,
                        "restaurante_id": restaurante.id, "restaurante": restaurante.nome,
-                       "data": lista.data.isoformat(), "url": "/aluno"}
+                       "data": lista.data.isoformat(), "url": "/cliente"}
             headers = {"Content-Type": "application/json", "Idempotency-Key": f"cardapio-{evento['id']}"}
             if settings.NOTIFICATION_WEBHOOK_TOKEN:
                 headers["Authorization"] = f"Bearer {settings.NOTIFICATION_WEBHOOK_TOKEN}"

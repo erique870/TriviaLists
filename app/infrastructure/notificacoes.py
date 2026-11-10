@@ -25,7 +25,7 @@ class NotificacoesEmMemoria:
             lista = self.listas.obter_por_id(evento["lista_id"])
             restaurante = self.restaurantes.obter_por_id(lista.restaurante_id)
             for usuario in self.usuarios._usuarios.values():
-                if usuario.papel == PapelUsuario.ALUNO:
+                if usuario.papel == PapelUsuario.CLIENTE:
                     chave = (usuario.id, lista.id)
                     self.notificacoes.setdefault(chave, {
                         "id": len(self.notificacoes) + 1, "usuario_id": usuario.id,
@@ -71,7 +71,7 @@ class NotificacoesPostgres:
                            WHERE NOT e.processado ORDER BY e.id LIMIT 20 FOR UPDATE OF e SKIP LOCKED""")
             for evento in cur.fetchall():
                 conn.execute("""INSERT INTO notificacoes (usuario_id, lista_id, mensagem)
-                                SELECT id, %s, %s FROM usuarios WHERE papel='ALUNO'
+                                SELECT id, %s, %s FROM usuarios WHERE papel='CLIENTE'
                                 ON CONFLICT (usuario_id, lista_id) DO NOTHING""",
                              (evento["lista_id"], f"{evento['nome']} publicou o cardápio de {evento['data']:%d/%m/%Y}."))
                 conn.execute("UPDATE eventos_cardapio SET processado=TRUE WHERE id=%s", (evento["id"],))

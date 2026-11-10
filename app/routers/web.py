@@ -18,9 +18,9 @@ async def login_page() -> FileResponse:
     return FileResponse(BASE_PUBLIC_DIR / "index.html")
 
 
-@router.get("/aluno", response_class=FileResponse, summary="Interface Web do Aluno")
-async def aluno_page() -> FileResponse:
-    return FileResponse(BASE_PUBLIC_DIR / "aluno.html")
+@router.get("/cliente", response_class=FileResponse, summary="Interface Web do Cliente")
+async def cliente_page() -> FileResponse:
+    return FileResponse(BASE_PUBLIC_DIR / "cliente.html")
 
 
 @router.get("/parceiro", response_class=FileResponse, summary="Interface Web do Parceiro")

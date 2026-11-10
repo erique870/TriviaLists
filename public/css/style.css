@@ -132,7 +132,7 @@ main.main-content {
 }
 
 /* ==============================================================================
-   ABAS DE NAVEGAÇÃO (ENTRAR / NOVO ALUNO)
+   ABAS DE NAVEGAÇÃO (ENTRAR / NOVO CLIENTE)
    ============================================================================== */
 .tabs {
     display: flex;
@@ -327,7 +327,7 @@ main.main-content {
 }
 
 /* ==============================================================================
-   DASHBOARD / TELAS PROTEGIDAS (ALUNO & PARCEIRO)
+   DASHBOARD / TELAS PROTEGIDAS (CLIENTE & PARCEIRO)
    ============================================================================== */
 .dashboard-container {
     width: 100%;
@@ -385,7 +385,7 @@ main.main-content {
     text-transform: uppercase;
 }
 
-.role-badge.aluno {
+.role-badge.cliente {
     background: #E8EEFC;
     color: var(--color-accent);
 }
