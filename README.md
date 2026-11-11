@@ -171,7 +171,7 @@ Fora do Escopo:
 
 - **RN01 - Respeito ao Horário Limite**: O sistema deve bloquear novos pedidos e cancelamentos para o dia após o horário limite definido pelo estabelecimento.
 - **RN02 - Publicação Tardia do Cardápio Variável**: Caso o parceiro com cardápio variável não publique as opções do dia até o horário limite regular, o tempo limite de pedidos/cancelamentos daquele restaurante deve ser automaticamente estendido por 30 minutos após o momento da publicação.
-- **RN03 - Pedido Único Ativo**: Um cliente pode ter apenas um pedido ativo por restaurante para a mesma data/refeição. Pedidos cancelados não contam para esta restrição, de modo que o cliente possa cancelar e refazer o pedido enquanto a lista estiver aberta.
+- **RN03 - Pedido Único Ativo**: Um cliente pode ter apenas um pedido ativo por lista diária, ou seja, por refeição de um restaurante em uma data. Pedidos cancelados não contam para esta restrição, de modo que o cliente possa cancelar e refazer o pedido enquanto a lista estiver aberta.
 - **RN04 - Confirmação do Pedido**: Um pedido é considerado válido após ser gravado no banco de dados com timestamp anterior ao horário limite.
 - **RN05 - Escopo de Acesso**: Um cliente só pode consultar e cancelar os próprios pedidos. Um parceiro só pode publicar listas, encerrá-las e gerar relatórios do restaurante que administra. O vínculo entre usuário e restaurante é obtido da sessão autenticada, nunca de dados informados na requisição.
 
@@ -182,7 +182,7 @@ Fora do Escopo:
 **Prioridade**: Alta.\
 \
 **RF02**: Cadastrar Cardápio Diário.\
-**Descrição**: O parceiro deve conseguir publicar o cardápio do dia informando opções de pratos, acompanhamentos e observações.\
+**Descrição**: O parceiro deve conseguir publicar o cardápio do dia informando as opções de pratos, com descrição e preço de cada uma.\
 **Prioridade**: Alta.\
 \
 **RF03**: Fazer Pedido.\
@@ -213,19 +213,19 @@ Fora do Escopo:
 
 **RNF01**: Desempenho.\
 **Descrição**: O sistema deve processar a confirmação de pedido e atualizar o totalizador em tempo de resposta reduzido.\
-**Métrica/Critério**: Responder em até 2.0s para 95%das requisições.\
+**Métrica/Critério**: Meta de resposta em até 2.0s para 95% das requisições. Ainda não medida.\
 \
 **RNF02**: Usabilidade.\
 **Descrição**: A interface deve ser otimizada para uso em telas de smartphones de diversos portes.\
-**Métrica/Critério**: Padrão Mobile-First com 100%de responsividade.\
+**Métrica/Critério**: Layout fluido no padrão Mobile-First, com pontos de quebra em 480px e 640px e contêineres limitados a 940px.\
 \
 **RNF03**: Disponibilidade.\
 **Descrição**: O sistema deve estar operacional nos horários de pico de solicitações (08:00 às 14:00).\
-**Métrica/Critério**: Disponibilidade de 99.5%durante o horário comercial.\
+**Métrica/Critério**: Meta de 99.5% de disponibilidade durante o horário comercial. Depende da hospedagem e ainda não medida.\
 \
 **RNF04**: Segurança/LGPD.\
 **Descrição**: Os dados pessoais dos clientes devem ser armazenados com proteção e privacidade.\
-**Métrica/Critério**: Tráfego integralmente sob TLS (HTTPS); senhas armazenadas como *hash* com sal, por meio de algoritmo próprio para esse fim (bcrypt ou Argon2), de modo que não sejam recuperáveis nem pela equipe de desenvolvimento.
+**Métrica/Critério**: Tráfego integralmente sob TLS (HTTPS); senhas armazenadas como *hash* com sal, por meio de algoritmo próprio para esse fim (scrypt, RFC 7914), de modo que não sejam recuperáveis nem pela equipe de desenvolvimento.
 
 ## Histórias de Usuário (Exemplos Principais)
 
@@ -251,7 +251,7 @@ RF02 & CU04, CU07 & ListaDiaria, Produto\
 RF03 & CU02 & Pedido, ItemPedido, ListaDiaria, Produto\
 RF04 & CU03 & Pedido, ListaDiaria\
 RF05 & CU06 & ListaDiaria, Pedido, ItemPedido\
-RF06 & CU04 & ListaDiaria\
+RF06 & CU04 & ListaDiaria, EventoCardapio, Notificacao\
 RF07 & CU04, CU05 & Restaurante, ListaDiaria\
 RF08 & CU08 & Usuario\
 RN01 & CU01, CU02, CU03, CU05 & ListaDiaria\
@@ -513,14 +513,14 @@ A arquitetura prioriza usabilidade para os estudantes, simplicidade operacional 
 
 O sistema adota o padrão **Cliente-Servidor** organizado em uma **Arquitetura em Camadas**:
 
-- **Camada de Apresentação (Cliente Web / PWA)**: Uma aplicação de página única com capacidades de PWA, executada no navegador do dispositivo do usuário, com um foco principal em dispositivos móveis.
+- **Camada de Apresentação (Cliente Web)**: Uma aplicação de página única executada no navegador do dispositivo do usuário, com um foco principal em dispositivos móveis.
 - **Camada de Negócio e Serviços (Servidor / Api REST)**: Servidor responsável pelo processamento de requisições, autenticação, orquestração das regras de corte de horários e geração de relatórios consolidados.
 - **Camada de Banco de Dados**: Sistema Gerenciador de Banco de Dados Relacional responsável pelo armazenamento dos dados persistentes, como configurações e pedidos dos restaurantes.
 
 Optou-se por não utilizar arquiteturas distribuídas complexas (como microsserviços), uma vez que adicionariam overhead de rede, e um tempo e custo de desenvolvimento muito acima do escopo do projeto. Usar essa arquitetura cliente-servidor centralizada garante:
 
 1. **Garantia de consistência (RN01, RN03, RN04)**: O servidor central é a fonte única da verdade para o controle do horário limite, eliminando fraudes ou divergências de relógio dos dispositivos clientes.
-2. **Usabilidade máxima (RNF02, RNF03)**: Ao ser disponibilizado como PWA, o estudante não precisa baixar instaladores em lojas de aplicativos (Google Play / App Store); o acesso via URL é imediato e sempre atualizado sem ação do usuário, tornando o processo de pedido mais rápido que redigir mensagens no WhatsApp.
+2. **Usabilidade máxima (RNF02, RNF03)**: Sendo uma aplicação web, o estudante não precisa baixar instaladores em lojas de aplicativos (Google Play / App Store); o acesso via URL é imediato e sempre atualizado sem ação do usuário, tornando o processo de pedido mais rápido que redigir mensagens no WhatsApp.
 3. **Baixa latência (RNF01)**: A separação clara entre cliente e API desacopla a interface da lógica pesada de consolidação, mantendo respostas sempre ágeis.
 
 ## Componentes e Responsabilidades
@@ -534,7 +534,7 @@ A divisão de responsabilidades foi modularizada em componentes bem delimitados:
 - **API REST (FastAPI)**: Ponto de entrada único das requisições HTTP. Responde pelas rotas sob `/api`, encaminha cada chamada ao componente responsável e traduz o resultado em códigos de resposta HTTP. Não contém regra de negócio.
 - **Controlador de Autenticação e Sessão**: Gerencia tokens de acesso seguros, validando se o usuário possui permissão de cliente ou de parceiro comercial. É também onde se aplica a RN05: o identificador do restaurante administrado por um parceiro é extraído da sessão, nunca da requisição.
 - **Módulo de Regras de Negócio e Pedidos**: Na parte do servidor, processa as solicitações e valida se o pedido do cliente respeita as regras de negócio, como a regra de pedido único ativo por restaurante (RN03) e assegura que a submissão ocorreu antes do horário de corte estabelecido (RN01 e RN02). É também o responsável pela consolidação do relatório de produção (RF05). Nenhuma regra de negócio é verificada fora deste componente.
-- **Serviço de Notificação**: Responsável pelo RF06. Identifica os clientes inscritos em um restaurante e despacha as notificações de publicação de cardápio de forma assíncrona, por meio de um serviço externo de *push*, sem bloquear a resposta ao parceiro.
+- **Serviço de Notificação**: Responsável pelo RF06. Grava os avisos de publicação de cardápio na caixa de notificações de todos os clientes cadastrados, de forma assíncrona, sem bloquear a resposta ao parceiro. Não há inscrição por restaurante nesta versão. O despacho adicional a um serviço externo de *push* é opcional e só ocorre quando `NOTIFICATION_WEBHOOK_URL` está configurada.
 - **Camada de Acesso a Dados**: Concentra as consultas e gravações no banco relacional e o gerenciamento do *pool* de conexões. Isolá-la em um único módulo permite controlar o número de conexões simultâneas abertas pelo servidor nos horários de pico (RNF03).
 
 ## Relacionamento e Comunicação entre Componentes
@@ -595,11 +595,11 @@ A chave é composta por `lista\_diaria\_id`, e não por restaurante e data, porq
 A Tabela [tab:rnf-arquitetura](#tab%3Arnf-arquitetura) detalha como as decisões tecnológicas e a arquitetura adotada satisfazem os requisitos não funcionais.
 
 l p3.2cm X **RNF** & **Critério Definido** & **Sustentação na Arquitetura**\
-**RNF01** (Desempenho) & Resposta em até 2.0s para 95%das requisições & Frontend estático sem sobrecarga de frameworks, entregue via CDN; consultas SQL simples e indexadas por data e por lista diária.\
-**RNF02** (Usabilidade) & Mobile-First com 100%de responsividade & Folhas de estilo em CSS3 nativo com *media queries* sob medida para smartphones; interface limpa inspirada na agilidade do WhatsApp.\
-**RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & Processo ASGI com reinicialização no Compose; acesso ao PostgreSQL por pool de conexões. A meta de disponibilidade depende da hospedagem e ainda precisa de medição operacional.\
+**RNF01** (Desempenho) & Meta de 2.0s para 95% das requisições, ainda não medida & Frontend estático sem sobrecarga de frameworks, entregue pelo próprio servidor ASGI; consultas SQL simples e indexadas por data e por lista diária.\
+**RNF02** (Usabilidade) & Mobile-First com quebras em 480px e 640px & Folhas de estilo em CSS3 nativo com *media queries* sob medida para smartphones; interface limpa inspirada na agilidade do WhatsApp.\
+**RNF03** (Disponibilidade) & Meta de 99.5% nos horários de pico (08:00 às 14:00), ainda não medida & Processo ASGI com reinicialização no Compose; acesso ao PostgreSQL por pool de conexões. A meta de disponibilidade depende da hospedagem e ainda precisa de medição operacional.\
 \
-**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas com scrypt e sal; acesso restrito pela RN05. A implantação de produção deve configurar HTTPS; Argon2/bcrypt permanecem alternativas previstas pelo requisito original.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
+**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas com scrypt e sal; acesso restrito pela RN05. A implantação de produção deve configurar HTTPS;*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
 
 # Lições Aprendidas
 
