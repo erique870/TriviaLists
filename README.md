@@ -225,7 +225,7 @@ Fora do Escopo:
 \
 **RNF04**: Segurança/LGPD.\
 **Descrição**: Os dados pessoais dos clientes devem ser armazenados com proteção e privacidade.\
-**Métrica/Critério**: Tráfego integralmente sob TLS (HTTPS); senhas armazenadas como *hash* com sal, por meio de algoritmo próprio para esse fim (bcrypt ou Argon2), de modo que não sejam recuperáveis nem pela equipe de desenvolvimento.
+**Métrica/Critério**: Tráfego integralmente sob TLS (HTTPS); senhas armazenadas como *hash* com sal, por meio de algoritmo próprio para esse fim (scrypt, RFC 7914), de modo que não sejam recuperáveis nem pela equipe de desenvolvimento.
 
 ## Histórias de Usuário (Exemplos Principais)
 
@@ -534,7 +534,7 @@ A divisão de responsabilidades foi modularizada em componentes bem delimitados:
 - **API REST (FastAPI)**: Ponto de entrada único das requisições HTTP. Responde pelas rotas sob `/api`, encaminha cada chamada ao componente responsável e traduz o resultado em códigos de resposta HTTP. Não contém regra de negócio.
 - **Controlador de Autenticação e Sessão**: Gerencia tokens de acesso seguros, validando se o usuário possui permissão de cliente ou de parceiro comercial. É também onde se aplica a RN05: o identificador do restaurante administrado por um parceiro é extraído da sessão, nunca da requisição.
 - **Módulo de Regras de Negócio e Pedidos**: Na parte do servidor, processa as solicitações e valida se o pedido do cliente respeita as regras de negócio, como a regra de pedido único ativo por restaurante (RN03) e assegura que a submissão ocorreu antes do horário de corte estabelecido (RN01 e RN02). É também o responsável pela consolidação do relatório de produção (RF05). Nenhuma regra de negócio é verificada fora deste componente.
-- **Serviço de Notificação**: Responsável pelo RF06. Identifica os clientes inscritos em um restaurante e despacha as notificações de publicação de cardápio de forma assíncrona, por meio de um serviço externo de *push*, sem bloquear a resposta ao parceiro.
+- **Serviço de Notificação**: Responsável pelo RF06. Grava os avisos de publicação de cardápio na caixa de notificações de todos os clientes cadastrados, de forma assíncrona, sem bloquear a resposta ao parceiro. Não há inscrição por restaurante nesta versão. O despacho adicional a um serviço externo de *push* é opcional e só ocorre quando `NOTIFICATION_WEBHOOK_URL` está configurada.
 - **Camada de Acesso a Dados**: Concentra as consultas e gravações no banco relacional e o gerenciamento do *pool* de conexões. Isolá-la em um único módulo permite controlar o número de conexões simultâneas abertas pelo servidor nos horários de pico (RNF03).
 
 ## Relacionamento e Comunicação entre Componentes
@@ -595,11 +595,11 @@ A chave é composta por `lista\_diaria\_id`, e não por restaurante e data, porq
 A Tabela [tab:rnf-arquitetura](#tab%3Arnf-arquitetura) detalha como as decisões tecnológicas e a arquitetura adotada satisfazem os requisitos não funcionais.
 
 l p3.2cm X **RNF** & **Critério Definido** & **Sustentação na Arquitetura**\
-**RNF01** (Desempenho) & Resposta em até 2.0s para 95%das requisições & Frontend estático sem sobrecarga de frameworks, entregue via CDN; consultas SQL simples e indexadas por data e por lista diária.\
+**RNF01** (Desempenho) & Resposta em até 2.0s para 95%das requisições & Frontend estático sem sobrecarga de frameworks, entregue pelo próprio servidor ASGI; consultas SQL simples e indexadas por data e por lista diária.\
 **RNF02** (Usabilidade) & Mobile-First com 100%de responsividade & Folhas de estilo em CSS3 nativo com *media queries* sob medida para smartphones; interface limpa inspirada na agilidade do WhatsApp.\
 **RNF03** (Disponibilidade) & 99.5%nos horários de pico (08:00 às 14:00) & Processo ASGI com reinicialização no Compose; acesso ao PostgreSQL por pool de conexões. A meta de disponibilidade depende da hospedagem e ainda precisa de medição operacional.\
 \
-**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas com scrypt e sal; acesso restrito pela RN05. A implantação de produção deve configurar HTTPS; Argon2/bcrypt permanecem alternativas previstas pelo requisito original.*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
+**RNF04** (Segurança/LGPD) & TLS em trânsito; senhas em *hash* & Senhas armazenadas com scrypt e sal; acesso restrito pela RN05. A implantação de produção deve configurar HTTPS;*Mapeamento entre Requisitos Não Funcionais e soluções arquiteturais.*<a id="tab:rnf-arquitetura"></a>
 
 # Lições Aprendidas
 
